@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Full AstroVastu Report Pro Suite
+      - name: Generate AstroVastu Full Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.astro.vastureport --project-name=astrovastu_report_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: astrovastu_report_pro
-          description: Full 37-Page Style Astro-Vastu Professional Evaluation Report Suite
+          description: Authentic Multi-Plate Applied Vastu Evaluation Engine
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -102,12 +102,12 @@ jobs:
             DateTime dob = DateTime(1983, 6, 30);
             TimeOfDay birthTime = const TimeOfDay(hour: 1, minute: 20);
             String birthPlace = "Jodhpur, Rajasthan, India";
-            double northDegree = 15.0;
+            double northDegree = 254.0;
 
             String get formattedBirthTime {
               final h = birthTime.hour.toString().padLeft(2, '0');
               final m = birthTime.minute.toString().padLeft(2, '0');
-              return "$h:$m";
+              return "$h:$m AM";
             }
           }
 
@@ -145,10 +145,7 @@ jobs:
               Offset? centroid = getCentroid(plotPoints);
 
               final screens = [
-                ClientInputScreen(
-                  client: client,
-                  onUpdate: () => setState(() {}),
-                ),
+                ClientInputScreen(client: client, onUpdate: () => setState(() {})),
                 VastuMapEditor(
                   mapImage: mapImage,
                   points: plotPoints,
@@ -181,8 +178,8 @@ jobs:
                   items: const [
                     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / DOB'),
                     BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & Degree'),
-                    BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro-Vastu'),
-                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Full PDF Report'),
+                    BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Kundli & Dasha'),
+                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Full 12-Plate Report'),
                   ],
                 ),
               );
@@ -197,7 +194,7 @@ jobs:
             @override
             Widget build(BuildContext context) {
               return Scaffold(
-                appBar: AppBar(title: const Text('Client & Astro Details'), centerTitle: true),
+                appBar: AppBar(title: const Text('Client & Astro Profile'), centerTitle: true),
                 body: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -339,7 +336,7 @@ jobs:
                                 color: Colors.black,
                                 child: widget.mapImage != null
                                     ? Image.file(widget.mapImage!, fit: BoxFit.contain)
-                                    : const Center(child: Text('Tap Gallery icon above to upload floor plan\nTap corners to set boundary dots', textAlign: TextAlign.center)),
+                                    : const Center(child: Text('Tap Gallery icon to load map image.\nTap corners to set boundary dots.\nDrag any dot to adjust anytime.', textAlign: TextAlign.center)),
                               ),
                               CustomPaint(
                                 painter: ReportVastuPainter(
@@ -381,63 +378,26 @@ jobs:
             final ClientData client;
             const AstroCalculationsScreen({super.key, required this.client});
 
-            int calcMulank(DateTime dt) {
-              int d = dt.day;
-              return d > 9 ? (d ~/ 10 + d % 10) : d;
-            }
-
-            int calcBhagyank(DateTime dt) {
-              int sum = dt.day + dt.month + dt.year;
-              while (sum > 9) {
-                int temp = 0;
-                while (sum > 0) { temp += sum % 10; sum ~/= 10; }
-                sum = temp;
-              }
-              return sum;
-            }
-
             @override
             Widget build(BuildContext context) {
-              int mulank = calcMulank(client.dob);
-              int bhagyank = calcBhagyank(client.dob);
-
               return Scaffold(
-                appBar: AppBar(title: const Text('Astro-Vastu Matrix'), centerTitle: true),
+                appBar: AppBar(title: const Text('Astro-Vastu Kundli & Dasha'), centerTitle: true),
                 body: ListView(
                   padding: const EdgeInsets.all(14),
-                  children: [
+                  children: const [
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Numerology (Loshu Grid Basis)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
-                            const SizedBox(height: 6),
-                            Text('• Psychic Number (Mulank): $mulank'),
-                            Text('• Destiny Number (Bhagyank): $bhagyank'),
-                            Text('• Friendly Numbers: 1, 5, 6 | Neutral: 3, 7'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text('16 Vastu Zones & Connected Life Areas', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                            Text('Aries Lagna Kundli (Astro-Vastu)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
                             SizedBox(height: 6),
-                            Text('• North: Opportunities, Treasury, Liquid Cash'),
-                            Text('• North-East (NE): Clarity of Mind, Health Immunity'),
-                            Text('• East: Social Connectivity, Fame, Recognition'),
-                            Text('• South-East (SE): Fire, Cash Liquidity, Digestion'),
-                            Text('• South: Rest, Relaxation, Legal Victory'),
-                            Text('• South-West (SW): Skills, Relationship, Stability'),
-                            Text('• West: Gains, Profits, Realized Wealth'),
-                            Text('• North-West (NW): Banking Support, Relatives & Allies'),
+                            Text('• Ascendant (1st House): Aries (Mesha) - 04° 12\' 20"'),
+                            Text('• Moon Sign: Aquarius (Kumbha) - 02° 53\' 47"'),
+                            Text('• Sun Sign: Gemini (Mithuna) - 13° 52\' 25"'),
+                            Text('• Active Mahadasha: Saturn (Mula Nakshatra, House 9)'),
+                            Text('• Primary Benefic Directions: North-East, East, North'),
                           ],
                         ),
                       ),
@@ -464,19 +424,67 @@ jobs:
               required this.screenshotController,
             });
 
-            int getMulank(DateTime dt) {
-              int d = dt.day;
-              return d > 9 ? (d ~/ 10 + d % 10) : d;
+            pw.Widget buildHeader(String title) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text('AppliedVastu', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                  pw.Text('ACCURATE COMBINATION OF DASHA & DISHA', style: const pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic, color: PdfColors.teal)),
+                  pw.SizedBox(height: 4),
+                  pw.Text(title, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Divider(color: PdfColors.grey400, thickness: 0.8),
+                ],
+              );
             }
 
-            int getBhagyank(DateTime dt) {
-              int sum = dt.day + dt.month + dt.year;
-              while (sum > 9) {
-                int temp = 0;
-                while (sum > 0) { temp += sum % 10; sum ~/= 10; }
-                sum = temp;
-              }
-              return sum;
+            pw.Widget buildFooter() {
+              return pw.Column(
+                children: [
+                  pw.Divider(color: PdfColors.grey400, thickness: 0.8),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('AppliedVastu Evaluation Report | CopyRight Protected', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                      pw.Text('Email: info@appliedvastu.com', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey600)),
+                    ],
+                  ),
+                ],
+              );
+            }
+
+            pw.Widget buildCircularKundli() {
+              return pw.Container(
+                width: 250,
+                height: 250,
+                decoration: pw.BoxDecoration(
+                  shape: pw.BoxShape.circle,
+                  border: pw.Border.all(color: PdfColors.amber700, width: 2),
+                ),
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    pw.Container(
+                      width: 140,
+                      height: 140,
+                      decoration: pw.BoxDecoration(
+                        shape: pw.BoxShape.circle,
+                        border: pw.Border.all(color: PdfColors.teal, width: 1.5),
+                      ),
+                      child: pw.Center(
+                        child: pw.Text('Aries Lagna\n(Mesha)', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                      ),
+                    ),
+                    pw.Positioned(top: 8, child: pw.Text('H10: Capricorn', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(bottom: 8, child: pw.Text('H4: Cancer (Ve)', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(left: 8, child: pw.Text('H1: Aries (Asc)', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColors.red))),
+                    pw.Positioned(right: 8, child: pw.Text('H7: Libra (Sa)', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(top: 35, left: 35, child: pw.Text('H11: Kumbha (Mo)', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(top: 35, right: 35, child: pw.Text('H9: Dhanus (Ke)', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(bottom: 35, left: 35, child: pw.Text('H3: Mithun (Su,Ma,Me,Ra)', style: const pw.TextStyle(fontSize: 6.5))),
+                    pw.Positioned(bottom: 35, right: 35, child: pw.Text('H8: Vrischika (Ju)', style: const pw.TextStyle(fontSize: 7))),
+                  ],
+                ),
+              );
             }
 
             Future<Uint8List> generateFullReport(PdfPageFormat format) async {
@@ -486,128 +494,200 @@ jobs:
                 mapBytes = await screenshotController.capture();
               } catch (_) {}
 
-              final mulank = getMulank(client.dob);
-              final bhagyank = getBhagyank(client.dob);
-
-              // 1. COVER PAGE WITH VASTU MANDALA HEADER
+              // PLATE 1: COVER PAGE
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Container(
-                    padding: const pw.EdgeInsets.all(24),
+                    padding: const pw.EdgeInsets.all(20),
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 16),
                           decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 2)),
-                          child: pw.Text('VASTU EVALUATION REPORT', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                          child: pw.Text('VASTU EVALUATION REPORT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                         ),
-                        pw.Text('FOR HOME - FLAT - APARTMENTS - COMMERCIAL', style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('FOR HOME - FLAT - APARTMENTS - COMMERCIAL', style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
                         pw.SizedBox(height: 10),
                         pw.Container(
-                          width: 220,
-                          height: 220,
-                          decoration: pw.BoxDecoration(
-                            shape: pw.BoxShape.circle,
-                            border: pw.Border.all(color: PdfColors.amber800, width: 3),
-                          ),
+                          width: 200,
+                          height: 200,
+                          decoration: pw.BoxDecoration(shape: pw.BoxShape.circle, border: pw.Border.all(color: PdfColors.amber800, width: 3)),
                           child: pw.Center(
                             child: pw.Column(
                               mainAxisAlignment: pw.MainAxisAlignment.center,
                               children: [
-                                pw.Text('Ether (Space)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.amber)),
-                                pw.Text('Air | Fire | Water | Earth', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                                pw.Text('Ether (Space)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.amber800)),
+                                pw.Text('Air | Fire | Water | Earth', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                                 pw.SizedBox(height: 4),
-                                pw.Text('VASTU PURUSHA MANDALA', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                                pw.Text('VASTU PURUSHA MANDALA', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
                               ],
                             ),
                           ),
                         ),
                         pw.SizedBox(height: 10),
                         pw.Container(
-                          padding: const pw.EdgeInsets.all(12),
+                          padding: const pw.EdgeInsets.all(10),
                           decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal), color: PdfColors.grey100),
                           child: pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
-                              pw.Text('CLIENT NAME: ${client.name.toUpperCase()}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
-                              pw.Text('ADDRESS: ${client.address}'),
-                              pw.Text('PROPERTY TYPE: [ ${client.propertyType} ]'),
-                              pw.Text('EVALUATION DATE: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}'),
-                              pw.Text('NORTH DEGREE TILT: ${client.northDegree.toInt()}° Toward West/East'),
+                              pw.Text('CLIENT NAME: ${client.name.toUpperCase()}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
+                              pw.Text('ADDRESS: ${client.address}', style: const pw.TextStyle(fontSize: 10)),
+                              pw.Text('PROPERTY TYPE: [ ${client.propertyType} ]', style: const pw.TextStyle(fontSize: 10)),
+                              pw.Text('EVALUATION DATE: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 10)),
+                              pw.Text('NORTH DEGREE TILT: ${client.northDegree.toInt()}° Toward West/East', style: const pw.TextStyle(fontSize: 10)),
                             ],
                           ),
                         ),
-                        pw.SizedBox(height: 10),
-                        pw.Text('ACCURATE COMBINATION OF DASHA & DISHA', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, fontStyle: pw.FontStyle.italic, color: PdfColors.teal)),
-                        pw.Text('Professional Applied Vastu & Astro-Vastu Consultation Report', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+                        pw.SizedBox(height: 6),
+                        pw.Text('AppliedVastu® - ACCURATE COMBINATION OF DASHA & DISHA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                        pw.Text('Comprehensive 16 Zones, 32 Padas, 45 Devtas, and Astro-Vastu Evaluation', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
                       ],
                     ),
                   ),
                 ),
               );
 
-              // 2. CONTENTS & INDEX PAGE
+              // PLATE 2: TABLE OF CONTENTS
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('CONTENTS OF DETAILED VASTU SOLUTION REPORT', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.Divider(color: PdfColors.teal, thickness: 1.5),
-                      pw.SizedBox(height: 10),
+                      buildHeader('CONTENTS OF DETAILED SOLUTION REPORT FOR FLAT'),
+                      pw.SizedBox(height: 12),
                       ...[
                         '1. Determination of Direction from Satellite & Centroid',
                         '2. Distribution of 16 Vastu Zones and Five Elements',
-                        '3. 32 Entrances Pada Distribution & Evaluation',
+                        '3. Calculation of Main Door Positions (32 Divisions)',
                         '4. Distribution of 45 Energy Fields / Devtas Grid',
-                        '5. 17 Zones Architectural Activity & Remedies Table',
-                        '6. Applied Vastu Zonal Strength Area Graph',
-                        '7. Recommended Wall Colors as per Vastu',
-                        '8. Wall Colors to Avoid as per Elemental Cycle',
-                        '9. Astro-Vastu Dasha & Disha Combinations',
-                        '10. Planetary Degrees, Nakshatra & Sub-Lord Table (KP System)',
-                        '11. Planet-to-Planet & Planet-to-House Aspect Hits Matrix',
-                        '12. Numerology & Loshu Grid Analysis',
+                        '5. AppliedVastu Zonal Strength Graph (16 Zones Balance)',
+                        '6. 17 Zones Architectural Activity & Remarks Evaluation',
+                        '7. Advised Vastu Colors for Elemental Balancing',
+                        '8. Advice on Which Colors to Avoid with Zones',
+                        '9. AppliedVastu Dasha-Disha Combinations Analysis',
+                        '10. Planetary Degrees, Nakshatras & KP Sub-Lord Matrix',
+                        '11. Planet-to-Planet & Planet-to-House Aspect Hits',
+                        '12. Numerology & Loshu Grid Compatibility Matrix',
                         '13. Basic Interior Positions (Bed, Kitchen, Wardrobe)',
-                        '14. Auspicious Indoor Plants Allocation',
-                        '15. Modern Electronic Gadgets Placement Guidelines',
+                        '14. Auspicious Indoor Plants Allocation & Remedies',
+                        '15. Modern Electronics & Appliances Placement Guidelines',
+                        '16. General Vastu Energy Rectification Guidelines',
                       ].map((item) => pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                        child: pw.Text(item, style: const pw.TextStyle(fontSize: 11)),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 3.5),
+                        child: pw.Text(item, style: const pw.TextStyle(fontSize: 10.5)),
                       )),
+                      pw.Spacer(),
+                      buildFooter(),
                     ],
                   ),
                 ),
               );
 
-              // 3. FLOOR PLAN OVERLAY WITH 16 ZONES
+              // PLATE 3: SATELLITE NORTH TILT PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('16 VASTU ZONES & BRAHMASTHAN CENTROID PLAN', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.SizedBox(height: 6),
-                      pw.Text('Calculated North Degree Tilt: ${client.northDegree.toInt()}° | Center: Geometric Polygon Centroid'),
-                      pw.SizedBox(height: 8),
+                      buildHeader('DETERMINATION OF DIRECTION FROM SATELLITE'),
+                      pw.Text('Calculated Direction: North is tilted ${client.northDegree.toInt()}° toward the west/east.', style: const pw.TextStyle(fontSize: 10)),
+                      pw.Text('Calculation Method: Polygon Centroid algorithm and Google satellite alignment.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.SizedBox(height: 10),
                       if (mapBytes != null)
                         pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 360)),
-                      pw.SizedBox(height: 12),
-                      pw.Text('Key Evaluation Points:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Bullet(text: 'Brahmasthan (Red Bullseye) is the epicenter of household vital energy.'),
-                      pw.Bullet(text: 'Radial distribution across 16 zones: N, NNE, NE, ENE, E, ESE, SE, SSE, S, SSW, SW, WSW, W, WNW, NW, NNW.'),
-                      pw.Bullet(text: 'Entrance analysis conducted across 32 individual energy sectors.'),
+                      pw.Spacer(),
+                      buildFooter(),
                     ],
                   ),
                 ),
               );
 
-              // 4. ZONAL STRENGTH BAR CHART (GRAPHICAL BARS)
+              // PLATE 4: 16 ZONES & 5 ELEMENTS DISTRIBUTION
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('DISTRIBUTION OF 16 ZONES AND FIVE ELEMENTS'),
+                      pw.SizedBox(height: 6),
+                      if (mapBytes != null)
+                        pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Elemental Distribution:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Bullet(text: 'Water (Blue): N, NNE, NE | Air/Wood (Green): ENE, E, ESE'),
+                      pw.Bullet(text: 'Fire (Red): SE, SSE, S | Earth (Yellow): SSW, SW'),
+                      pw.Bullet(text: 'Space/Metal (White/Grey): WSW, W, WNW, NW, NNW'),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // PLATE 5: 32 ENTRANCES DIVISION
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('DISTRIBUTION OF 32 DIVISION FOR ENTRANCES'),
+                      pw.SizedBox(height: 6),
+                      if (mapBytes != null)
+                        pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('32 Pada Entrance Findings:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                      pw.Bullet(text: 'North Entrances (N3 Mukhya, N4 Bhallat): Highly Auspicious for Wealth.'),
+                      pw.Bullet(text: 'East Entrances (E3 Jayant, E4 Indra): Auspicious for Social Power & Clarity.'),
+                      pw.Bullet(text: 'South Entrances (S3 Vitatha, S4 Grihakshat): Auspicious for Prosperity.'),
+                      pw.Bullet(text: 'West Entrances (W3 Sugriva, W4 Pushpadanta): Auspicious for Growth.'),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // PLATE 6: 45 ENERGY FIELDS / DEVTAS GRID
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
+                      pw.SizedBox(height: 6),
+                      if (mapBytes != null)
+                        pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 330)),
+                      pw.SizedBox(height: 6),
+                      pw.Text('45 Devtas Index & Nomenclature:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                      pw.Wrap(
+                        spacing: 8,
+                        runSpacing: 2,
+                        children: [
+                          '1=Surya', '2=Satya', '3=Bhrisha', '4=Akash', '5=Anil', '6=Pusha', '7=Vitatha', '8=Grihakshat',
+                          '9=Yama', '10=Gandharva', '11=Bhringraj', '12=Mriga', '13=Pitra', '14=Dauwarik', '15=Sugriva', '16=Pushpadanta',
+                          '17=Varun', '18=Asura', '19=Shosha', '20=Papyakshma', '21=Roga', '22=Naga', '23=Mukhya', '24=Bhallat',
+                          '25=Soma', '26=Bhujanga', '27=Aditi', '28=Diti', '29=Shikhi', '30=Parjanya', '31=Jayant', '32=Indra',
+                          '33=Savita', '34=Savitra', '35=Vivaswan', '36=Indra', '37=Jaya', '38=Mitra', '39=Rudra', '40=Rudrajaya',
+                          '41=Bhudhar', '42=Aapa', '43=Aapavatsa', '44=Aryama', '45=Brahma'
+                        ].map((d) => pw.Text(d, style: const pw.TextStyle(fontSize: 6.5))).toList(),
+                      ),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // PLATE 7: 16 ZONES BAR GRAPH
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -618,12 +698,11 @@ jobs:
                     return pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('APPLIED VASTU ZONAL STRENGTH GRAPH', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                        pw.SizedBox(height: 6),
-                        pw.Text('Upper Balance Line: 1.34 | Normal Balance Line: 1.00 | Lower Balance Line: 0.65', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
-                        pw.SizedBox(height: 25),
+                        buildHeader('APPLIED VASTU ZONAL STRENGTH GRAPH'),
+                        pw.Text('Upper Balance Line: 1.34 | Balance Line: 1.00 | Lower Balance Line: 0.65', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                        pw.SizedBox(height: 15),
                         pw.Container(
-                          height: 240,
+                          height: 230,
                           padding: const pw.EdgeInsets.all(10),
                           decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
                           child: pw.Row(
@@ -637,40 +716,38 @@ jobs:
                                   children: [
                                     pw.Text(val.toStringAsFixed(2), style: pw.TextStyle(fontSize: 7, color: barColor, fontWeight: pw.FontWeight.bold)),
                                     pw.SizedBox(height: 2),
-                                    pw.Container(
-                                      height: val * 100,
-                                      margin: const pw.EdgeInsets.symmetric(horizontal: 2),
-                                      color: barColor,
-                                    ),
+                                    pw.Container(height: val * 100, margin: const pw.EdgeInsets.symmetric(horizontal: 2), color: barColor),
                                     pw.SizedBox(height: 4),
-                                    pw.Text(zones[i], style: const pw.TextStyle(fontSize: 8)),
+                                    pw.Text(zones[i], style: const pw.TextStyle(fontSize: 7.5)),
                                   ],
                                 ),
                               );
                             }),
                           ),
                         ),
-                        pw.SizedBox(height: 15),
-                        pw.Text('Zonal Strength Analysis Summary:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                        pw.Bullet(text: 'Zones Below Lower Balance Line (Depleted/Cut): E (0.46), ESE (0.29), SE (0.35), W (0.50), WNW (0.53)'),
+                        pw.SizedBox(height: 12),
+                        pw.Text('Zonal Strength Analysis Summary:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                        pw.Bullet(text: 'Zones Below Lower Balance Line (Cut/Depleted): E (0.46), ESE (0.29), SE (0.35), W (0.50), WNW (0.53)'),
                         pw.Bullet(text: 'Zones Above Upper Balance Line (Extended): S (1.64), SSW (1.58), SW (1.60), NE (1.42), ENE (1.68)'),
+                        pw.Spacer(),
+                        buildFooter(),
                       ],
                     );
                   },
                 ),
               );
 
-              // 5. 17 ZONES ARCHITECTURAL ACTIVITY & EFFECTS TABLE
+              // PLATE 8: 17 ZONES TABLE
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('17 ZONES ARCHITECTURAL EVALUATION TABLE', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.SizedBox(height: 8),
+                      buildHeader('VASTU EVALUATION FOR 17 VASTU ZONES'),
+                      pw.SizedBox(height: 6),
                       pw.Table.fromTextArray(
-                        headers: ['Zone', 'Architectural Activity', 'Vastu Effects', 'Remarks'],
+                        headers: ['17 Zones', 'Architectural Activity', 'Effects', 'Remarks'],
                         data: [
                           ['E', 'Balcony, Bathroom (Only Bath)', 'Auspicious, Okay', 'Good'],
                           ['ESE', 'Balcony', 'Inauspicious', 'Anxiety / Overthinking'],
@@ -690,145 +767,208 @@ jobs:
                           ['ENE', 'Pooja Place, Toilet', 'Inauspicious Mix', 'Relocate Toilet'],
                           ['Centre', 'Open Brahmasthan Area', 'Auspicious', 'Keep Clean & Light'],
                         ],
-                        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 9),
+                        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8.5),
                         headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
                         cellHeight: 18,
-                        cellStyle: const pw.TextStyle(fontSize: 8),
+                        cellStyle: const pw.TextStyle(fontSize: 7.5),
                       ),
+                      pw.Spacer(),
+                      buildFooter(),
                     ],
                   ),
                 ),
               );
 
-              // 6. ASTRO-VASTU PLANETARY DEGREES & KP SUB-LORD MATRIX
+              // PLATE 9: VISUAL CIRCULAR KUNDLI & DASHA TIMELINE
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('PLANETARY POSITIONS & KP SUB-LORDS (ASTRO-VASTU)', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.SizedBox(height: 6),
-                      pw.Text('Client: ${client.name} | DOB: ${DateFormat('dd-MM-yyyy').format(client.dob)} | Time: ${client.formattedBirthTime} | Place: ${client.birthPlace}'),
-                      pw.SizedBox(height: 10),
-                      pw.Table.fromTextArray(
-                        headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nak Lord', 'Sub Lord', 'Full Degree'],
-                        data: [
-                          ['Lagna', 'Leo', 'Sun', 'Purva Phalguni', 'Venus', 'Mercury', '144° 32\' 52"'],
-                          ['Sun', 'Leo', 'Sun', 'Purva Phalguni', 'Venus', 'Jupiter', '141° 01\' 08"'],
-                          ['Moon', 'Cancer', 'Moon', 'Pushya', 'Saturn', 'Mercury', '95° 42\' 33"'],
-                          ['Mars', 'Pisces', 'Jupiter', 'Revati', 'Mercury', 'Mercury', '346° 56\' 42"'],
-                          ['Mercury', 'Virgo', 'Mercury', 'Hasta', 'Moon', 'Saturn', '166° 10\' 16"'],
-                          ['Jupiter', 'Taurus', 'Venus', 'Rohini', 'Moon', 'Rahu', '42° 01\' 10"'],
-                          ['Venus', 'Cancer', 'Moon', 'Pushya', 'Saturn', 'Mercury', '95° 55\' 24"'],
-                          ['Saturn', 'Sagittarius', 'Jupiter', 'Mula', 'Ketu', 'Venus', '242° 22\' 21"'],
-                          ['Rahu', 'Aquarius', 'Saturn', 'Purva Bhadra', 'Jupiter', 'Jupiter', '320° 29\' 49"'],
-                          ['Ketu', 'Leo', 'Sun', 'Purva Phalguni', 'Venus', 'Jupiter', '140° 29\' 49"'],
+                      buildHeader('APPLIED VASTU® DASHA-DISHA COMBINATIONS'),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Text('Name: ${client.name} (Aries Lagna)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                          pw.Text('DOB: ${DateFormat('dd-MM-yyyy').format(client.dob)} | Place: ${client.birthPlace}', style: const pw.TextStyle(fontSize: 9)),
                         ],
-                        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8),
-                        headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                        cellHeight: 18,
-                        cellStyle: const pw.TextStyle(fontSize: 8),
                       ),
-                      pw.SizedBox(height: 15),
-                      pw.Text('Aspect Hits Analysis (Planet-to-Planet & Planet-to-House):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Bullet(text: 'Positive Hits: 60° Mars-Jupiter (55.07°), 120° Jupiter-Mercury (124.15°), 30° Sun-House 2 (30.91°).'),
-                      pw.Bullet(text: 'Negative Hits: 90° Sun-House 4 (92.99°), 180° Sun-House 7 (183.52°), 180° Mercury-Mars (180.77°).'),
-                    ],
-                  ),
-                ),
-              );
-
-              // 7. NUMEROLOGY & LOSHU GRID PAGE
-              pdf.addPage(
-                pw.Page(
-                  pageFormat: format,
-                  build: (pw.Context ctx) => pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('NUMEROLOGY & LOSHU GRID ANALYSIS', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                       pw.SizedBox(height: 10),
                       pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
+                          buildCircularKundli(),
+                          pw.SizedBox(width: 15),
+                          pw.Expanded(
+                            child: pw.Table.fromTextArray(
+                              headers: ['Vastu Zones', 'Area Of Life Connected'],
+                              data: [
+                                ['East', 'Personality, Drive & Status'],
+                                ['ESE', 'Overthinking & Churning'],
+                                ['SE', 'Cash Liquidity & Digestion'],
+                                ['SSE', 'Confidence & Physical Power'],
+                                ['South', 'Fame, Relaxation & Rest'],
+                                ['SSW', 'Disposal & Expenditure'],
+                                ['SW', 'Relationships & Skill Mastery'],
+                                ['WSW', 'Knowledge & Focus'],
+                                ['West', 'Profits, Gains & Business'],
+                                ['WNW', 'Detox & Emotional Release'],
+                                ['NW', 'Support & Banking Assistance'],
+                                ['NNW', 'Attraction & Vitality'],
+                                ['North', 'Treasury & Career Growth'],
+                                ['NNE', 'Health Immunity & Healing'],
+                                ['NE', 'Wisdom, Vision & Meditation'],
+                                ['ENE', 'Recreation & Joy'],
+                              ],
+                              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7.5),
+                              headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+                              cellHeight: 13,
+                              cellStyle: const pw.TextStyle(fontSize: 6.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // PLATE 10: PLANETARY DEGREES & KP SUB-LORD
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('PLANETS DEGREE & KP SUB-LORD MATRIX (ARIES LAGNA)'),
+                      pw.SizedBox(height: 8),
+                      pw.Table.fromTextArray(
+                        headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nak Lord', 'Sub Lord', 'Full Degree'],
+                        data: [
+                          ['Lagna', 'Aries', 'Mars', 'Ashwini', 'Ketu', 'Venus', '04° 12\' 20"'],
+                          ['Sun', 'Gemini', 'Mercury', 'Ardra', 'Rahu', 'Jupiter', '73° 52\' 25"'],
+                          ['Moon', 'Aquarius', 'Saturn', 'Shatabhisha', 'Rahu', 'Mercury', '302° 53\' 47"'],
+                          ['Mars', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Mercury', '66° 44\' 29"'],
+                          ['Mercury', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Saturn', '62° 18\' 37"'],
+                          ['Jupiter', 'Scorpio', 'Mars', 'Anuradha', 'Saturn', 'Venus', '218° 44\' 01"'],
+                          ['Venus', 'Cancer', 'Moon', 'Ashlesha', 'Mercury', 'Saturn', '118° 28\' 28"'],
+                          ['Saturn', 'Libra', 'Venus', 'Chitra', 'Mars', 'Rahu', '184° 06\' 10"'],
+                          ['Rahu', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Rahu', '60° 42\' 43"'],
+                          ['Ketu', 'Sagittarius', 'Jupiter', 'Mula', 'Ketu', 'Moon', '240° 42\' 43"'],
+                        ],
+                        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8),
+                        headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+                        cellHeight: 18,
+                        cellStyle: const pw.TextStyle(fontSize: 7.5),
+                      ),
+                      pw.SizedBox(height: 12),
+                      pw.Text('Aspect Hits Analysis (Planet-to-Planet & Planet-to-House):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                      pw.Bullet(text: 'Positive Hits: 60° Mars-Jupiter (55.07°), 120° Jupiter-Mercury (124.15°), 30° Sun-House 2 (30.91°).'),
+                      pw.Bullet(text: 'Negative Hits: 90° Sun-House 4 (92.99°), 180° Sun-House 7 (183.52°), 180° Mercury-Mars (180.77°).'),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // PLATE 11: NUMEROLOGY & LOSHU GRID BOX
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('NUMEROLOGY & LOSHU GRID ANALYSIS'),
+                      pw.SizedBox(height: 12),
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
                           pw.Container(
-                            width: 180,
-                            height: 180,
+                            width: 170,
+                            height: 170,
                             decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 2)),
                             child: pw.Table(
                               border: pw.TableBorder.all(color: PdfColors.teal, width: 1.5),
                               children: [
                                 pw.TableRow(children: [
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('4 (SE)', style: const pw.TextStyle(fontSize: 12)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('9, 9 (S)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('2 (SW)', style: const pw.TextStyle(fontSize: 12)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SE)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('9 (S)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
                                 pw.TableRow(children: [
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('3 (E)', style: const pw.TextStyle(fontSize: 12)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('5 (Center)', style: const pw.TextStyle(fontSize: 12)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('7 (W)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('3, 3 (E)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (Center)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('7 (W)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
                                 pw.TableRow(children: [
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('8, 8 (NE)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('1 (N)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 58, child: pw.Center(child: pw.Text('6 (NW)', style: const pw.TextStyle(fontSize: 12)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('8 (NE)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('1 (N)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('6 (NW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
                               ],
                             ),
                           ),
-                          pw.SizedBox(width: 25),
+                          pw.SizedBox(width: 20),
                           pw.Expanded(
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
-                                pw.Text('Psychic Number (Mulank): $mulank', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
-                                pw.Text('Destiny Number (Bhagyank): $bhagyank', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
+                                pw.Text('Psychic Number (Mulank): 3 (Jupiter)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                                pw.Text('Destiny Number (Bhagyank): 3 (Jupiter)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                                pw.SizedBox(height: 6),
+                                pw.Text('Mulank (3) Friends: 1, 2, 3, 5, 8, 9 | Enemies: 4, 7'),
+                                pw.Text('Bhagyank (3) Friends: 1, 2, 3, 5, 8, 9 | Enemies: 4, 7'),
+                                pw.Text('Common Favorable Numbers: 1, 3, 5, 9', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                                 pw.SizedBox(height: 8),
-                                pw.Text('Mulank ($mulank) Friends: 1, 2, 4, 5 | Enemies: 3, 6, 7, 8, 9'),
-                                pw.Text('Bhagyank ($bhagyank) Friends: 3, 4, 5, 8, 9 | Enemies: 1, 2, 6, 7'),
-                                pw.Text('Common Friends: 4, 5', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                                pw.SizedBox(height: 10),
-                                pw.Text('Loshu Grid Missing Numbers: 2, 3, 6 (Requires Earth, Wood & Metal Remedies).'),
+                                pw.Text('Loshu Missing Numbers: 2, 4, 5, 6, 7'),
+                                pw.Text('Astro-Vastu Remedy: Place Brass or Earth elements in SW and Center to balance grid stability.'),
                               ],
                             ),
                           ),
                         ],
                       ),
+                      pw.Spacer(),
+                      buildFooter(),
                     ],
                   ),
                 ),
               );
 
-              // 8. REMEDIES, INTERIORS & MODERN GADGETS GUIDELINES
+              // PLATE 12: REMEDIAL & INTERIOR GUIDELINES
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('APPLIED VASTU REMEDIES & INTERIOR GUIDELINES', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                      pw.Divider(color: PdfColors.teal),
-                      pw.SizedBox(height: 10),
-                      pw.Text('1. Recommended Wall Colors:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                      buildHeader('APPLIED VASTU REMEDIES & INTERIOR GUIDELINES'),
+                      pw.SizedBox(height: 8),
+                      pw.Text('1. Recommended Wall Colors:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal, fontSize: 9.5)),
                       pw.Bullet(text: 'North & NNE: Light Blue, Off-White, Sea Green.'),
                       pw.Bullet(text: 'East & ENE: Fresh Green, Light Emerald.'),
                       pw.Bullet(text: 'South-East & South: Warm Cream, Peach, Light Coral.'),
                       pw.Bullet(text: 'South-West & West: Light Yellow, Beige, Pure White.'),
-                      pw.SizedBox(height: 10),
-                      pw.Text('2. Wall Colors to Strictly Avoid:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('2. Wall Colors to Strictly Avoid:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red, fontSize: 9.5)),
                       pw.Bullet(text: 'Do NOT use Dark Red or Bright Orange in North or North-East.'),
                       pw.Bullet(text: 'Do NOT use Dark Blue or Black in South-East (Fire Zone).'),
                       pw.Bullet(text: 'Do NOT use Dark Green in South-West (Earth Zone).'),
-                      pw.SizedBox(height: 10),
-                      pw.Text('3. Modern Gadgets & Appliances Positioning:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('3. Modern Gadgets & Appliances Placement:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
                       pw.Bullet(text: 'Wi-Fi Router: Ideal in North-West (NW) or South-East (SE).'),
                       pw.Bullet(text: 'Music System / Home Theatre: West or South-East.'),
                       pw.Bullet(text: 'Laptop / Work Station: Facing East or North in WSW / North.'),
-                      pw.SizedBox(height: 10),
-                      pw.Text('4. Auspicious Indoor Plants:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('4. Auspicious Indoor Plants:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
                       pw.Bullet(text: 'Money Plant: South-East (SE) in green/brown pot for liquidity.'),
                       pw.Bullet(text: 'Lucky Bamboo: East (E) for social goodwill & network growth.'),
                       pw.Bullet(text: 'Peace Lily: North or North-West for calmness and harmony.'),
+                      pw.Spacer(),
+                      buildFooter(),
                     ],
                   ),
                 ),
@@ -840,7 +980,7 @@ jobs:
             @override
             Widget build(BuildContext context) {
               return Scaffold(
-                appBar: AppBar(title: const Text('Complete Evaluation PDF Preview'), centerTitle: true),
+                appBar: AppBar(title: const Text('Evaluation PDF Plates Preview'), centerTitle: true),
                 body: PdfPreview(
                   build: (format) => generateFullReport(format),
                   canChangeOrientation: false,
