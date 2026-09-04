@@ -61,6 +61,7 @@ jobs:
           import 'dart:io';
           import 'dart:math' as math;
           import 'dart:typed_data';
+          import 'dart:ui' as ui;
           import 'package:flutter/material.dart';
           import 'package:image_picker/image_picker.dart';
           import 'package:screenshot/screenshot.dart';
@@ -102,6 +103,12 @@ jobs:
             TimeOfDay birthTime = const TimeOfDay(hour: 6, minute: 22);
             String birthPlace = "Delhi, NCT, India";
             double northDegree = 15.0;
+
+            String get formattedBirthTime {
+              final h = birthTime.hour.toString().padLeft(2, '0');
+              final m = birthTime.minute.toString().padLeft(2, '0');
+              return "$h:$m";
+            }
           }
 
           class MainDashboard extends StatefulWidget {
@@ -235,7 +242,7 @@ jobs:
                     const SizedBox(height: 10),
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.white24)),
-                      title: Text('Birth Time: ${client.birthTime.format(context)}'),
+                      title: Text('Birth Time: ${client.formattedBirthTime}'),
                       trailing: const Icon(Icons.access_time, color: Colors.tealAccent),
                       onTap: () async {
                         TimeOfDay? t = await showTimePicker(context: context, initialTime: client.birthTime);
@@ -479,7 +486,7 @@ jobs:
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
                         pw.Text('VASTU EVALUATION REPORT', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                        pw.Text('FOR HOME - FLAT - COMMERCIAL SPACE', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
+                        pw.Text('FOR HOME - FLAT - COMMERCIAL SPACE', style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
                         pw.SizedBox(height: 20),
                         pw.Container(
                           padding: const pw.EdgeInsets.all(15),
@@ -583,7 +590,7 @@ jobs:
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text('DOB: ${DateFormat('dd/MM/yyyy').format(client.dob)}'),
-                            pw.Text('Birth Time: ${client.birthTime.format(ctx)}'),
+                            pw.Text('Birth Time: ${client.formattedBirthTime}'),
                             pw.Text('Place: ${client.birthPlace}'),
                           ],
                         ),
@@ -664,7 +671,7 @@ jobs:
                   Offset textPos = Offset(centroid!.dx + (radius + 14) * math.cos(angle), centroid!.dy + (radius + 14) * math.sin(angle));
                   TextPainter tp = TextPainter(
                     text: TextSpan(text: dir16[i], style: const TextStyle(color: Colors.amberAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                    textDirection: TextDirection.ltr,
+                    textDirection: ui.TextDirection.ltr,
                   )..layout();
                   tp.paint(canvas, textPos - Offset(tp.width / 2, tp.height / 2));
                 }
