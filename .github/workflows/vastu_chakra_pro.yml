@@ -523,11 +523,6 @@ jobs:
               required Uint8List? bgMap,
               required double degree,
             }) {
-              const List<String> topLabels = ['दिति', 'ईश', 'पर्जन्य', 'जयन्त', 'महेन्द्र', 'सूर्य'];
-              const List<String> rightLabels = ['सत्य', 'भृश', 'अन्तरिक्ष', 'अग्नि', 'पूषा', 'वितथ', 'गृहक्षत', 'यम', 'गन्धर्व', 'भृंग'];
-              const List<String> bottomLabels = ['मृग', 'पितृ', 'दौवारिक', 'सुग्रीव', 'पुष्पदन्त', 'वरुण'];
-              const List<String> leftLabels = ['असुर', 'शोष', 'पापयक्ष्मा', 'रोग', 'नाग', 'मुख्य', 'भल्लाट', 'सोम', 'भुजंग', 'अदिति'];
-
               return pw.Column(
                 children: [
                   pw.Container(
@@ -575,7 +570,7 @@ jobs:
                                 canvas.drawRect(cx - w33 / 2, cy - h33 / 2, w33, h33);
                                 canvas.strokePath();
 
-                                // Radial Projection Rays from Brahma to Boundary (Deva & Manushya lines)
+                                // Radial Projection Rays from Brahma to Boundary
                                 canvas.setColor(PdfColors.blue800);
                                 canvas.setLineWidth(0.85);
 
@@ -615,18 +610,18 @@ jobs:
                                 drawRadial(cx - w33 / 2, cy + h33 / 2, 5, h - 5);
                                 drawRadial(cx + w33 / 2, cy + h33 / 2, w - 5, h - 5);
 
-                                // Node Red Dots on Perimeter
+                                // Node Red Dots on Perimeter (using drawEllipse)
                                 canvas.setColor(PdfColors.red);
                                 for (int i = 0; i <= 7; i++) {
-                                  canvas.drawCircle(5 + ((w - 10) / 7) * i, 5, 2.5);
+                                  canvas.drawEllipse(5 + ((w - 10) / 7) * i, 5, 2.5, 2.5);
                                   canvas.fillPath();
-                                  canvas.drawCircle(5 + ((w - 10) / 7) * i, h - 5, 2.5);
+                                  canvas.drawEllipse(5 + ((w - 10) / 7) * i, h - 5, 2.5, 2.5);
                                   canvas.fillPath();
                                 }
                                 for (int i = 0; i <= 11; i++) {
-                                  canvas.drawCircle(5, 5 + ((h - 10) / 11) * i, 2.5);
+                                  canvas.drawEllipse(5, 5 + ((h - 10) / 11) * i, 2.5, 2.5);
                                   canvas.fillPath();
-                                  canvas.drawCircle(w - 5, 5 + ((h - 10) / 11) * i, 2.5);
+                                  canvas.drawEllipse(w - 5, 5 + ((h - 10) / 11) * i, 2.5, 2.5);
                                   canvas.fillPath();
                                 }
                               },
@@ -991,7 +986,7 @@ jobs:
                 ),
               );
 
-              // 8. 45 ENERGY FIELDS / DEVTA GRID (33%-77%-100% RECTANGULAR RADIAL CONCENTRIC)
+              // 8. 45 ENERGY FIELDS / DEVTA GRID (CONCENTRIC RECTANGULAR RADIAL)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
