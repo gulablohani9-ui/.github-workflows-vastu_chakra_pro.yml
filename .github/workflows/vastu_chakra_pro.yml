@@ -465,34 +465,61 @@ jobs:
               );
             }
 
-            pw.Widget buildArchitecturalBaseFloorPlan() {
+            pw.Widget buildDynamicColorRoomPlan({
+              required double degree,
+              required bool isAvoidPlan,
+            }) {
+              double rad = (degree - 90) * (math.pi / 180.0);
+              
+              PdfColor getColorForDirection(double localAngleRad) {
+                double totalAngle = (localAngleRad + rad) % (2 * math.pi);
+                if (totalAngle < 0) totalAngle += 2 * math.pi;
+                double deg = totalAngle * (180.0 / math.pi);
+
+                if (!isAvoidPlan) {
+                  if (deg >= 337.5 || deg < 22.5) return PdfColors.blue700;
+                  if (deg >= 22.5 && deg < 67.5) return PdfColors.cyan700;
+                  if (deg >= 67.5 && deg < 112.5) return PdfColors.green700;
+                  if (deg >= 112.5 && deg < 157.5) return PdfColors.lightGreen700;
+                  if (deg >= 157.5 && deg < 202.5) return PdfColors.red700;
+                  if (deg >= 202.5 && deg < 247.5) return PdfColors.amber700;
+                  if (deg >= 247.5 && deg < 292.5) return PdfColors.grey600;
+                  return PdfColors.grey400;
+                } else {
+                  if (deg >= 337.5 || deg < 22.5) return PdfColors.red700;
+                  if (deg >= 67.5 && deg < 112.5) return PdfColors.blueGrey700;
+                  if (deg >= 157.5 && deg < 202.5) return PdfColors.blue700;
+                  if (deg >= 202.5 && deg < 247.5) return PdfColors.green700;
+                  return PdfColors.deepOrange700;
+                }
+              }
+
               return pw.Container(
                 width: 320,
                 height: 320,
                 child: pw.CustomPaint(
                   size: const PdfPoint(320, 320),
                   painter: (PdfGraphics canvas, PdfPoint size) {
-                    canvas.setColor(PdfColors.black);
-                    canvas.setLineWidth(1.4);
+                    PdfColor cTopLeft = getColorForDirection(-3 * math.pi / 4);
+                    PdfColor cTopRight = getColorForDirection(-math.pi / 4);
+                    PdfColor cBottomLeft = getColorForDirection(3 * math.pi / 4);
+                    PdfColor cBottomRight = getColorForDirection(math.pi / 4);
 
-                    // Outer Structure Walls (Exact CAD Layout representation)
-                    canvas.drawRect(30, 30, 260, 260);
-                    canvas.strokePath();
-
-                    // Room partitions
-                    canvas.drawLine(30, 160, 290, 160);
-                    canvas.strokePath();
-                    canvas.drawLine(150, 30, 150, 160);
-                    canvas.strokePath();
-                    canvas.drawLine(170, 160, 170, 290);
-                    canvas.strokePath();
-                    canvas.drawLine(170, 210, 290, 210);
-                    canvas.strokePath();
-                    canvas.drawLine(30, 100, 150, 100);
+                    canvas.setColor(cTopLeft);
+                    canvas.setLineWidth(3.0);
+                    canvas.drawRect(35, 35, 120, 120);
                     canvas.strokePath();
 
-                    // Balcony Notch
-                    canvas.drawRect(120, 10, 80, 20);
+                    canvas.setColor(cTopRight);
+                    canvas.drawRect(165, 35, 120, 120);
+                    canvas.strokePath();
+
+                    canvas.setColor(cBottomLeft);
+                    canvas.drawRect(35, 165, 120, 120);
+                    canvas.strokePath();
+
+                    canvas.setColor(cBottomRight);
+                    canvas.drawRect(165, 165, 120, 120);
                     canvas.strokePath();
                   },
                 ),
@@ -512,37 +539,51 @@ jobs:
                 child: pw.Stack(
                   alignment: pw.Alignment.center,
                   children: [
-                    // 1. BASE FLOOR PLAN (Uploaded OR Architectural CAD Base)
                     if (bgMap != null)
                       pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain)
+                    else if (overlayType == 'colors')
+                      buildDynamicColorRoomPlan(degree: degree, isAvoidPlan: false)
+                    else if (overlayType == 'avoid_colors')
+                      buildDynamicColorRoomPlan(degree: degree, isAvoidPlan: true)
                     else
-                      buildArchitecturalBaseFloorPlan(),
+                      pw.Container(
+                        width: 300,
+                        height: 300,
+                        child: pw.CustomPaint(
+                          size: const PdfPoint(300, 300),
+                          painter: (PdfGraphics canvas, PdfPoint size) {
+                            canvas.setColor(PdfColors.black);
+                            canvas.setLineWidth(1.4);
+                            canvas.drawRect(20, 20, 260, 260);
+                            canvas.strokePath();
+                            canvas.drawLine(20, 150, 280, 150);
+                            canvas.strokePath();
+                            canvas.drawLine(150, 20, 150, 280);
+                            canvas.strokePath();
+                          },
+                        ),
+                      ),
 
-                    // 2. ROOM TEXT LABELS
-                    pw.Positioned(top: 50, left: 50, child: pw.Text('BED ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(top: 50, right: 50, child: pw.Text('TOILET / BATH', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(bottom: 70, left: 55, child: pw.Text('LIVING ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(bottom: 70, right: 55, child: pw.Text('KITCHEN', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(top: 15, left: 135, child: pw.Text('BALCONY', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700))),
+                    pw.Positioned(top: 45, left: 45, child: pw.Text('BED ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(top: 45, right: 45, child: pw.Text('TOILET / BATH', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(bottom: 65, left: 45, child: pw.Text('LIVING ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(bottom: 65, right: 45, child: pw.Text('KITCHEN', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
 
-                    // 3. 254 DEGREE ROTATED TRANSPARENT CHAKRA OVERLAY
                     if (chakraBytes != null)
                       pw.Transform.rotate(
                         angle: (degree) * (math.pi / 180),
                         child: pw.Image(pw.MemoryImage(chakraBytes), width: 350, height: 350, fit: pw.BoxFit.contain),
                       ),
 
-                    // 4. NORTH ARROW ANGLE MARKER (254° TILT)
                     pw.Transform.rotate(
                       angle: (degree - 90) * (math.pi / 180),
                       child: pw.CustomPaint(
                         size: const PdfPoint(240, 240),
                         painter: (PdfGraphics canvas, PdfPoint size) {
                           canvas.setColor(PdfColors.red);
-                          canvas.setLineWidth(2.0);
+                          canvas.setLineWidth(2.2);
                           canvas.drawLine(120, 120, 230, 120);
                           canvas.strokePath();
-                          // Arrow tip
                           canvas.drawLine(230, 120, 215, 112);
                           canvas.strokePath();
                           canvas.drawLine(230, 120, 215, 128);
@@ -551,7 +592,6 @@ jobs:
                       ),
                     ),
 
-                    // 5. CENTER BRAHMASTHAN BULLSEYE
                     pw.Container(
                       width: 14,
                       height: 14,
@@ -563,21 +603,20 @@ jobs:
                       decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.yellowAccent),
                     ),
 
-                    // Specific Overlay Labels for Therapy / Color / Gadgets
                     if (overlayType == 'colors')
                       pw.Positioned(
-                        bottom: 12,
+                        bottom: 8,
                         child: pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           color: PdfColors.white,
                           child: pw.Text('RECOMMENDED: North=Blue, East=Green, South=Red/Peach, West=White/Yellow', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.teal)),
                         ),
                       ),
                     if (overlayType == 'avoid_colors')
                       pw.Positioned(
-                        bottom: 12,
+                        bottom: 8,
                         child: pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           color: PdfColors.white,
                           child: pw.Text('STRICTLY AVOID: Red in North/NE, Blue in South-East, Green in South-West', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.red)),
                         ),
@@ -747,7 +786,7 @@ jobs:
                 ),
               );
 
-              // 4. SATELLITE NORTH TILT PLAN (MAP + 254 DEGREE ROTATED OVERLAY)
+              // 4. SATELLITE NORTH TILT PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -766,7 +805,7 @@ jobs:
                 ),
               );
 
-              // 5. PLAN WITH VASTU CHAKRA (MAP + 32 PADAS CHAKRA ROTATED AT 254 DEGREE)
+              // 5. PLAN WITH VASTU CHAKRA
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -783,7 +822,7 @@ jobs:
                 ),
               );
 
-              // 6. DISTRIBUTION OF 16 ZONES & 5 ELEMENTS (MAP + 16 ZONES CHAKRA AT 254 DEGREE)
+              // 6. DISTRIBUTION OF 16 ZONES & 5 ELEMENTS
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -800,7 +839,7 @@ jobs:
                 ),
               );
 
-              // 7. 32 ENTRANCES DIVISION (MAP + 32 DIVISION ROTATED)
+              // 7. 32 ENTRANCES DIVISION
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -822,7 +861,7 @@ jobs:
                 ),
               );
 
-              // 8. 45 ENERGY FIELDS / DEVTA GRID (MAP + 45 DEVTAS ROTATED)
+              // 8. 45 ENERGY FIELDS / DEVTA GRID
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -945,7 +984,7 @@ jobs:
                 ),
               );
 
-              // 11. RECOMMENDED COLOR PLAN (MAP FILLED WITH 254 DEGREE ZONES)
+              // 11. RECOMMENDED COLOR PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -953,7 +992,7 @@ jobs:
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       buildHeader('RECOMMENDED COLOR PLAN'),
-                      pw.Text('Use neutral colors in areas where no specific color is recommended.', style: const pw.TextStyle(fontSize: 8.5)),
+                      pw.Text('Colors dynamically assigned according to the ${client.northDegree.toInt()}° North orientation.', style: const pw.TextStyle(fontSize: 8.5)),
                       pw.SizedBox(height: 8),
                       pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree, overlayType: 'colors')),
                       pw.Spacer(),
@@ -963,7 +1002,7 @@ jobs:
                 ),
               );
 
-              // 12. COLOR TO AVOID PLAN (MAP FILLED WITH AVOID ADVICE)
+              // 12. COLOR TO AVOID PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -981,7 +1020,7 @@ jobs:
                 ),
               );
 
-              // 13. DASHA-DISHA THERAPY PLAN (MAP FILLED WITH ENERGY RAYS)
+              // 13. DASHA-DISHA THERAPY PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -998,7 +1037,7 @@ jobs:
                 ),
               );
 
-              // 14. DASHA-DISHA ACTIVATION PLAN (MAP FILLED)
+              // 14. DASHA-DISHA ACTIVATION PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1015,7 +1054,7 @@ jobs:
                 ),
               );
 
-              // 15. DIRECTIONAL ENERGY ACTIVATION (MAP FILLED)
+              // 15. DIRECTIONAL ENERGY ACTIVATION
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1032,7 +1071,7 @@ jobs:
                 ),
               );
 
-              // 16. BASIC INTERIOR POSITION (MAP FILLED)
+              // 16. BASIC INTERIOR POSITION
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1049,7 +1088,7 @@ jobs:
                 ),
               );
 
-              // 17. AUSPICIOUS INDOOR PLANTS (MAP FILLED)
+              // 17. AUSPICIOUS INDOOR PLANTS
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1066,7 +1105,7 @@ jobs:
                 ),
               );
 
-              // 18. MODERN GADGETS POSITION (MAP FILLED)
+              // 18. MODERN GADGETS POSITION
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
