@@ -518,35 +518,114 @@ jobs:
               );
             }
 
-            // Dedicated Frame Wrapper for Page 11 & Page 12 using User Assets
-            pw.Widget buildFloorPlanInColorFrame({
+            // PURE VECTOR 100% TRANSPARENT COLOR FRAME (REPLACES STATIC PNG)
+            pw.Widget buildVectorColorPlanPlate({
               required Uint8List? bgMap,
-              required Uint8List? frameBytes,
               required double degree,
+              required bool isAvoidPlan,
             }) {
+              final recTop = [PdfColors.yellow, PdfColors.amber, PdfColors.orangeAccent, PdfColors.grey300];
+              final recRight = [PdfColors.grey400, PdfColors.grey600, PdfColors.blueGrey800, PdfColors.indigo900];
+              final recBottom = [PdfColors.purple, PdfColors.greenAccent, PdfColors.green700, PdfColors.lightGreen];
+              final recLeft = [PdfColors.red, PdfColors.pink, PdfColors.purpleAccent, PdfColors.amber200];
+
+              final avoidTop = [PdfColors.red, PdfColors.pinkAccent, PdfColors.purple, PdfColors.deepPurple];
+              final avoidRight = [PdfColors.red700, PdfColors.orange, PdfColors.amber, PdfColors.yellow];
+              final avoidBottom = [PdfColors.blueGrey800, PdfColors.white, PdfColors.lightGreenAccent, PdfColors.yellow];
+              final avoidLeft = [PdfColors.blue800, PdfColors.indigo900, PdfColors.black, PdfColors.grey];
+
+              final topColors = isAvoidPlan ? avoidTop : recTop;
+              final rightColors = isAvoidPlan ? avoidRight : recRight;
+              final bottomColors = isAvoidPlan ? avoidBottom : recBottom;
+              final leftColors = isAvoidPlan ? avoidLeft : recLeft;
+
               return pw.Container(
                 width: 360,
-                height: 360,
-                child: pw.Stack(
-                  alignment: pw.Alignment.center,
+                height: 380,
+                child: pw.Column(
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
                   children: [
-                    // Center Fitted Floor Plan
-                    if (bgMap != null)
-                      pw.Container(
-                        width: 280,
-                        height: 280,
-                        child: pw.Image(pw.MemoryImage(bgMap), fit: pw.BoxFit.contain),
-                      ),
-
-                    // Outer Frame Asset
-                    if (frameBytes != null)
-                      pw.Image(pw.MemoryImage(frameBytes), width: 360, height: 360, fit: pw.BoxFit.fill),
-
-                    // Center Bullseye
                     pw.Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                      width: 350,
+                      height: 350,
+                      child: pw.Stack(
+                        alignment: pw.Alignment.center,
+                        children: [
+                          // 1. Center Floor Plan (100% Visible & Transparent)
+                          if (bgMap != null)
+                            pw.Container(
+                              width: 300,
+                              height: 300,
+                              child: pw.Image(pw.MemoryImage(bgMap), fit: pw.BoxFit.contain),
+                            ),
+
+                          // 2. Center Bullseye Marker
+                          pw.Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                          ),
+
+                          // 3. Top Color Band
+                          pw.Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: pw.Row(
+                              children: topColors.map((c) => pw.Expanded(child: pw.Container(height: 18, color: c))).toList(),
+                            ),
+                          ),
+
+                          // 4. Bottom Color Band
+                          pw.Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: pw.Row(
+                              children: bottomColors.map((c) => pw.Expanded(child: pw.Container(height: 18, color: c))).toList(),
+                            ),
+                          ),
+
+                          // 5. Left Color Band
+                          pw.Positioned(
+                            top: 18,
+                            bottom: 18,
+                            left: 0,
+                            child: pw.Column(
+                              children: leftColors.map((c) => pw.Expanded(child: pw.Container(width: 18, color: c))).toList(),
+                            ),
+                          ),
+
+                          // 6. Right Color Band
+                          pw.Positioned(
+                            top: 18,
+                            bottom: 18,
+                            right: 0,
+                            child: pw.Column(
+                              children: rightColors.map((c) => pw.Expanded(child: pw.Container(width: 18, color: c))).toList(),
+                            ),
+                          ),
+
+                          // Inner Boundary Line
+                          pw.Container(
+                            width: 314,
+                            height: 314,
+                            decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey700, width: 1)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(height: 6),
+                    pw.Text(
+                      isAvoidPlan ? 'COLOR TO AVOID' : 'RECOMMENDED COLOR',
+                      style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: isAvoidPlan ? PdfColors.red800 : PdfColors.teal800),
+                    ),
+                    pw.Text(
+                      isAvoidPlan
+                          ? 'Strictly avoid anti-elemental colors to prevent energy depletion and negative vibrations.'
+                          : 'Use neutral colors in areas where no specific color is recommended. Neutral colors refer to light shades of white and off-white.',
+                      textAlign: pw.TextAlign.center,
+                      style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.grey700),
                     ),
                   ],
                 ),
@@ -593,8 +672,6 @@ jobs:
 
               final zonesChakra = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final padasChakra = await _loadAssetBytes('assets/images/vastu_32_padas.png');
-              final recFrame = await _loadAssetBytes('assets/images/recommended_colors_frame.png');
-              final avoidFrame = await _loadAssetBytes('assets/images/avoid_colors_frame.png');
 
               // 1. COVER PAGE
               pdf.addPage(
@@ -913,7 +990,7 @@ jobs:
                 ),
               );
 
-              // 11. RECOMMENDED COLOR PLAN (USING EXACT USER FRAME ASSET)
+              // 11. RECOMMENDED COLOR PLAN (100% CLEAR FLOOR PLAN INSIDE COLOR BARS)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -921,9 +998,8 @@ jobs:
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       buildHeader('RECOMMENDED COLOR PLAN'),
-                      pw.Text('Use neutral colors in areas where no specific color is recommended.', style: const pw.TextStyle(fontSize: 8.5)),
-                      pw.SizedBox(height: 8),
-                      pw.Center(child: buildFloorPlanInColorFrame(bgMap: mapImageBytes, frameBytes: recFrame, degree: client.northDegree)),
+                      pw.SizedBox(height: 4),
+                      pw.Center(child: buildVectorColorPlanPlate(bgMap: mapImageBytes, degree: client.northDegree, isAvoidPlan: false)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -931,7 +1007,7 @@ jobs:
                 ),
               );
 
-              // 12. COLOR TO AVOID PLAN (USING EXACT USER AVOID FRAME ASSET)
+              // 12. COLOR TO AVOID PLAN (100% CLEAR FLOOR PLAN INSIDE AVOID BARS)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -939,9 +1015,8 @@ jobs:
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       buildHeader('COLOR TO AVOID PLAN'),
-                      pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion.', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.red)),
-                      pw.SizedBox(height: 8),
-                      pw.Center(child: buildFloorPlanInColorFrame(bgMap: mapImageBytes, frameBytes: avoidFrame, degree: client.northDegree)),
+                      pw.SizedBox(height: 4),
+                      pw.Center(child: buildVectorColorPlanPlate(bgMap: mapImageBytes, degree: client.northDegree, isAvoidPlan: true)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
