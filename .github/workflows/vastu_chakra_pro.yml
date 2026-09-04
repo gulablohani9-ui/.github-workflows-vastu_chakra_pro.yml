@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Vastu Chakra Pro App
+      - name: Generate Vastu Chakra Pro Multi-Window Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.astro.vastuchakra --project-name=vastu_chakra_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: vastu_chakra_pro
-          description: Vastu Floor Plan Centroid 16 Zones and 45 Devtas Engine
+          description: Vastu Floor Plan Centroid, 16 Zones Bar Chart, 45 Devtas, and PDF Report Suite
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -44,6 +44,8 @@ jobs:
             screenshot: ^2.1.0
             path_provider: ^2.1.2
             share_plus: ^7.2.2
+            pdf: ^3.10.7
+            printing: ^5.11.1
 
           dev_dependencies:
             flutter_test:
@@ -57,11 +59,15 @@ jobs:
           cat << 'EOF' > lib/main.dart
           import 'dart:io';
           import 'dart:math' as math;
+          import 'dart:typed_data';
           import 'package:flutter/material.dart';
           import 'package:image_picker/image_picker.dart';
           import 'package:screenshot/screenshot.dart';
           import 'package:share_plus/share_plus.dart';
           import 'package:path_provider/path_provider.dart';
+          import 'package:pdf/pdf.dart';
+          import 'package:pdf/widgets.dart' as pw;
+          import 'package:printing/printing.dart';
 
           void main() {
             runApp(const VastuChakraApp());
@@ -78,43 +84,33 @@ jobs:
                 theme: ThemeData.dark().copyWith(
                   scaffoldBackgroundColor: const Color(0xFF121212),
                   primaryColor: Colors.amberAccent,
+                  cardColor: const Color(0xFF1E1E1E),
                   colorScheme: const ColorScheme.dark(
                     primary: Colors.amberAccent,
                     surface: Color(0xFF1E1E1E),
                   ),
                 ),
-                home: const VastuHomeScreen(),
+                home: const MainVastuContainer(),
               );
             }
           }
 
-          class VastuHomeScreen extends StatefulWidget {
-            const VastuHomeScreen({super.key});
+          class MainVastuContainer extends StatefulWidget {
+            const MainVastuContainer({super.key});
 
             @override
-            State<VastuHomeScreen> createState() => _VastuHomeScreenState();
+            State<MainVastuContainer> createState() => _MainVastuContainerState();
           }
 
-          class _VastuHomeScreenState extends State<VastuHomeScreen> {
-            File? _mapImage;
-            final ImagePicker _picker = ImagePicker();
-            final ScreenshotController _screenshotController = ScreenshotController();
+          class _MainVastuContainerState extends State<MainVastuContainer> {
+            int _navIndex = 0;
 
+            File? mapImage;
             List<Offset> points = [];
-            int selectedDivision = 16; // 4, 8, 16, 32
+            int selectedDivision = 16;
             bool showDevtas = false;
-            double northDegree = 0.0; // 0 to 360
-            int selectedFrontEdge = 0; // Edge index A-B, B-C etc.
-
-            Future<void> _pickImage(ImageSource source) async {
-              final picked = await _picker.pickImage(source: source);
-              if (picked != null) {
-                setState(() {
-                  _mapImage = File(picked.path);
-                  points.clear();
-                });
-              }
-            }
+            double northDegree = 0.0;
+            final ScreenshotController screenshotController = ScreenshotController();
 
             Offset? calculateCentroid(List<Offset> pts) {
               if (pts.length < 3) return null;
@@ -136,33 +132,127 @@ jobs:
               return Offset(cx, cy);
             }
 
-            Future<void> _captureAndShare() async {
-              try {
-                final image = await _screenshotController.capture();
-                if (image != null) {
-                  final dir = await getTemporaryDirectory();
-                  final file = File('${dir.path}/vastu_map_${DateTime.now().millisecondsSinceEpoch}.png');
-                  await file.writeAsBytes(image);
-                  await Share.shareXFiles([XFile(file.path)], text: 'Vastu Floor Plan Analysis Report');
-                }
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving: $e')));
-              }
-            }
-
             @override
             Widget build(BuildContext context) {
               Offset? centroid = calculateCentroid(points);
 
+              final List<Widget> windows = [
+                MapEditorWindow(
+                  mapImage: mapImage,
+                  points: points,
+                  centroid: centroid,
+                  selectedDivision: selectedDivision,
+                  showDevtas: showDevtas,
+                  northDegree: northDegree,
+                  screenshotController: screenshotController,
+                  onImageSelected: (img) => setState(() => mapImage = img),
+                  onPointsUpdated: (pts) => setState(() => points = pts),
+                  onDivisionChanged: (d) => setState(() => selectedDivision = d),
+                  onDevtasToggled: (v) => setState(() => showDevtas = v),
+                  onDegreeChanged: (deg) => setState(() => northDegree = deg),
+                ),
+                VastuBarChartWindow(
+                  points: points,
+                  centroid: centroid,
+                  northDegree: northDegree,
+                ),
+                const DevtasReferenceWindow(),
+                PdfExportWindow(
+                  points: points,
+                  centroid: centroid,
+                  northDegree: northDegree,
+                  selectedDivision: selectedDivision,
+                  screenshotController: screenshotController,
+                ),
+              ];
+
+              return Scaffold(
+                body: windows[_navIndex],
+                bottomNavigationBar: BottomNavigationBar(
+                  currentIndex: _navIndex,
+                  selectedItemColor: Colors.amberAccent,
+                  unselectedItemColor: Colors.grey,
+                  backgroundColor: const Color(0xFF1A1A1A),
+                  type: BottomNavigationBarType.fixed,
+                  onTap: (idx) => setState(() => _navIndex = idx),
+                  items: const [
+                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map Editor'),
+                    BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Bar Chart'),
+                    BottomNavigationBarItem(icon: Icon(Icons.temple_hindu), label: '45 Devtas'),
+                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'PDF Report'),
+                  ],
+                ),
+              );
+            }
+          }
+
+          // WINDOW 1: MAP EDITOR WITH DRAGGABLE/MODIFIABLE DOTS
+          class MapEditorWindow extends StatefulWidget {
+            final File? mapImage;
+            final List<Offset> points;
+            final Offset? centroid;
+            final int selectedDivision;
+            final bool showDevtas;
+            final double northDegree;
+            final ScreenshotController screenshotController;
+            final Function(File) onImageSelected;
+            final Function(List<Offset>) onPointsUpdated;
+            final Function(int) onDivisionChanged;
+            final Function(bool) onDevtasToggled;
+            final Function(double) onDegreeChanged;
+
+            const MapEditorWindow({
+              super.key,
+              required this.mapImage,
+              required this.points,
+              required this.centroid,
+              required this.selectedDivision,
+              required this.showDevtas,
+              required this.northDegree,
+              required this.screenshotController,
+              required this.onImageSelected,
+              required this.onPointsUpdated,
+              required this.onDivisionChanged,
+              required this.onDevtasToggled,
+              required this.onDegreeChanged,
+            });
+
+            @override
+            State<MapEditorWindow> createState() => _MapEditorWindowState();
+          }
+
+          class _MapEditorWindowState extends State<MapEditorWindow> {
+            final ImagePicker _picker = ImagePicker();
+            int? _draggedPointIndex;
+
+            Future<void> _pickImage(ImageSource source) async {
+              final picked = await _picker.pickImage(source: source);
+              if (picked != null) {
+                widget.onImageSelected(File(picked.path));
+                widget.onPointsUpdated([]);
+              }
+            }
+
+            int? _findNearestPoint(Offset touch) {
+              for (int i = 0; i < widget.points.length; i++) {
+                if ((widget.points[i] - touch).distance < 30.0) {
+                  return i;
+                }
+              }
+              return null;
+            }
+
+            @override
+            Widget build(BuildContext context) {
               return Scaffold(
                 appBar: AppBar(
-                  title: const Text('Vastu Chakra & Map Centroid'),
+                  title: const Text('Interactive Vastu Map'),
                   centerTitle: true,
                   actions: [
                     IconButton(
-                      icon: const Icon(Icons.share, color: Colors.amberAccent),
-                      tooltip: 'Capture & Share Map',
-                      onPressed: _captureAndShare,
+                      icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+                      tooltip: 'Clear All Dots',
+                      onPressed: () => widget.onPointsUpdated([]),
                     ),
                   ],
                 ),
@@ -170,50 +260,66 @@ jobs:
                   children: [
                     Container(
                       color: const Color(0xFF1E1E1E),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E2E2E), foregroundColor: Colors.amberAccent),
                             onPressed: () => _pickImage(ImageSource.gallery),
-                            icon: const Icon(Icons.photo_library, size: 18),
-                            label: const Text('Map'),
+                            icon: const Icon(Icons.photo_library, size: 16),
+                            label: const Text('Gallery'),
                           ),
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2E2E2E), foregroundColor: Colors.amberAccent),
                             onPressed: () => _pickImage(ImageSource.camera),
-                            icon: const Icon(Icons.camera_alt, size: 18),
+                            icon: const Icon(Icons.camera_alt, size: 16),
                             label: const Text('Camera'),
                           ),
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent.withOpacity(0.2), foregroundColor: Colors.redAccent),
-                            onPressed: () => setState(() => points.clear()),
-                            icon: const Icon(Icons.refresh, size: 18),
-                            label: const Text('Reset Dots'),
-                          ),
+                          if (widget.points.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: () {
+                                List<Offset> updated = List.from(widget.points);
+                                updated.removeLast();
+                                widget.onPointsUpdated(updated);
+                              },
+                              icon: const Icon(Icons.undo, color: Colors.orangeAccent, size: 16),
+                              label: const Text('Undo Dot', style: TextStyle(color: Colors.orangeAccent)),
+                            ),
                         ],
                       ),
                     ),
                     Expanded(
                       child: Screenshot(
-                        controller: _screenshotController,
+                        controller: widget.screenshotController,
                         child: GestureDetector(
-                          onTapDown: (details) {
-                            setState(() {
-                              points.add(details.localPosition);
-                            });
+                          onPanDown: (details) {
+                            int? found = _findNearestPoint(details.localPosition);
+                            if (found != null) {
+                              _draggedPointIndex = found;
+                            } else {
+                              List<Offset> updated = List.from(widget.points)..add(details.localPosition);
+                              widget.onPointsUpdated(updated);
+                            }
                           },
+                          onPanUpdate: (details) {
+                            if (_draggedPointIndex != null) {
+                              List<Offset> updated = List.from(widget.points);
+                              updated[_draggedPointIndex!] = details.localPosition;
+                              widget.onPointsUpdated(updated);
+                            }
+                          },
+                          onPanEnd: (_) => _draggedPointIndex = null,
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
                               Container(
                                 color: Colors.black,
-                                child: _mapImage != null
-                                    ? Image.file(_mapImage!, fit: BoxFit.contain)
+                                child: widget.mapImage != null
+                                    ? Image.file(widget.mapImage!, fit: BoxFit.contain)
                                     : const Center(
                                         child: Text(
-                                          '1. Upload Floor Plan Map or Click Photo\n2. Tap around plot corners to create boundary dots (A, B, C, D)\n3. App will auto calculate Brahmasthan (Center Point)',
+                                          '1. Add Map Image\n2. Tap to place corner dots\n3. Touch & drag any dot to reposition/modify anytime',
                                           textAlign: TextAlign.center,
                                           style: TextStyle(color: Colors.grey, height: 1.5),
                                         ),
@@ -221,11 +327,11 @@ jobs:
                               ),
                               CustomPaint(
                                 painter: VastuPainter(
-                                  points: points,
-                                  centroid: centroid,
-                                  division: selectedDivision,
-                                  showDevtas: showDevtas,
-                                  northDegree: northDegree,
+                                  points: widget.points,
+                                  centroid: widget.centroid,
+                                  division: widget.selectedDivision,
+                                  showDevtas: widget.showDevtas,
+                                  northDegree: widget.northDegree,
                                 ),
                               ),
                             ],
@@ -233,55 +339,50 @@ jobs:
                         ),
                       ),
                     ),
-                    _buildBottomControlPanel(centroid),
+                    _buildControls(),
                   ],
                 ),
               );
             }
 
-            Widget _buildBottomControlPanel(Offset? centroid) {
+            Widget _buildControls() {
               return Container(
-                color: const Color(0xFF1A1A1A),
-                padding: const EdgeInsets.all(12),
+                color: const Color(0xFF1E1E1E),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
                       children: [
-                        const Text('North °:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
+                        const Text('North: ', style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold)),
                         Expanded(
                           child: Slider(
-                            value: northDegree,
+                            value: widget.northDegree,
                             min: 0,
                             max: 360,
                             activeColor: Colors.amberAccent,
                             inactiveColor: Colors.grey,
-                            onChanged: (val) => setState(() => northDegree = val),
+                            onChanged: widget.onDegreeChanged,
                           ),
                         ),
-                        Text('${northDegree.toInt()}°', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        Text('${widget.northDegree.toInt()}°', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Directions:', style: TextStyle(fontWeight: FontWeight.bold)),
                         ToggleButtons(
                           isSelected: [
-                            selectedDivision == 4,
-                            selectedDivision == 8,
-                            selectedDivision == 16,
-                            selectedDivision == 32,
+                            widget.selectedDivision == 4,
+                            widget.selectedDivision == 8,
+                            widget.selectedDivision == 16,
+                            widget.selectedDivision == 32,
                           ],
-                          onPressed: (index) {
-                            setState(() {
-                              if (index == 0) selectedDivision = 4;
-                              if (index == 1) selectedDivision = 8;
-                              if (index == 2) selectedDivision = 16;
-                              if (index == 3) selectedDivision = 32;
-                            });
+                          onPressed: (idx) {
+                            const divs = [4, 8, 16, 32];
+                            widget.onDivisionChanged(divs[idx]);
                           },
-                          color: Colors.white60,
+                          color: Colors.white70,
                           selectedColor: Colors.black,
                           fillColor: Colors.amberAccent,
                           borderRadius: BorderRadius.circular(8),
@@ -293,31 +394,257 @@ jobs:
                           ],
                         ),
                         FilterChip(
-                          label: const Text('45 Devtas', style: TextStyle(fontSize: 12)),
-                          selected: showDevtas,
+                          label: const Text('45 Devtas Overlay', style: TextStyle(fontSize: 11)),
+                          selected: widget.showDevtas,
                           selectedColor: Colors.orangeAccent,
-                          onSelected: (val) => setState(() => showDevtas = val),
+                          onSelected: widget.onDevtasToggled,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    if (points.isNotEmpty)
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Plot Corners: ${points.length} Dots', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          if (points.length >= 2)
-                            Text('Front Wall: Dot 1 -> Dot 2', style: const TextStyle(color: Colors.tealAccent, fontSize: 12)),
-                          Text(centroid != null ? 'Brahmasthan: Locked' : 'Need 3+ Dots',
-                              style: TextStyle(color: centroid != null ? Colors.greenAccent : Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.centroid != null ? 'Brahmasthan (Center Point) Locked | Drag dots to modify' : 'Tap 3 or more corners to form boundary',
+                      style: TextStyle(color: widget.centroid != null ? Colors.greenAccent : Colors.amberAccent, fontSize: 11),
+                    ),
                   ],
                 ),
               );
             }
           }
 
+          // WINDOW 2: 16 ZONES BAR CHART WINDOW
+          class VastuBarChartWindow extends StatelessWidget {
+            final List<Offset> points;
+            final Offset? centroid;
+            final double northDegree;
+
+            const VastuBarChartWindow({
+              super.key,
+              required this.points,
+              required this.centroid,
+              required this.northDegree,
+            });
+
+            static const List<String> zones16 = [
+              'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+              'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+            ];
+
+            List<double> _calculateZoneStrengths() {
+              if (centroid == null || points.length < 3) {
+                return List.filled(16, 50.0);
+              }
+
+              List<double> strengths = List.filled(16, 0.0);
+              double step = 360.0 / 16.0;
+              double offsetRad = (northDegree - 90) * (math.pi / 180.0);
+
+              for (int z = 0; z < 16; z++) {
+                double zAngle = (z * step) * (math.pi / 180.0) + offsetRad;
+                double minDist = 9999.0;
+
+                for (var pt in points) {
+                  double d = (pt - centroid!).distance;
+                  double ptAngle = math.atan2(pt.dy - centroid!.dy, pt.dx - centroid!.dx);
+                  double diff = (ptAngle - zAngle).abs() % (2 * math.pi);
+                  if (diff > math.pi) diff = 2 * math.pi - diff;
+
+                  if (diff < (step * math.pi / 180.0)) {
+                    if (d < minDist) minDist = d;
+                  }
+                }
+                strengths[z] = minDist == 9999.0 ? 40.0 : (minDist % 100).clamp(25.0, 95.0);
+              }
+              return strengths;
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              List<double> heights = _calculateZoneStrengths();
+
+              return Scaffold(
+                appBar: AppBar(title: const Text('16 Zones Area Bar Chart'), centerTitle: true),
+                body: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '16 Vastu Zones Balancing (Cut & Extension Chart)',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.amberAccent),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Green: Balanced | Red: Cut Zone (<35%) | Orange: Extended Zone (>75%)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: List.generate(16, (i) {
+                            double val = heights[i];
+                            Color barColor = val < 35
+                                ? Colors.redAccent
+                                : (val > 75 ? Colors.orangeAccent : Colors.greenAccent);
+
+                            return Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Text('${val.toInt()}%', style: TextStyle(fontSize: 9, color: barColor, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    height: val * 2.5,
+                                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                                    decoration: BoxDecoration(
+                                      color: barColor,
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  RotatedBox(
+                                    quarterTurns: 3,
+                                    child: Text(zones16[i], style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+          }
+
+          // WINDOW 3: 45 VASTU DEVTAS REFERENCE WINDOW
+          class DevtasReferenceWindow extends StatelessWidget {
+            const DevtasReferenceWindow({super.key});
+
+            static const List<Map<String, String>> devtaList = [
+              {'name': 'Brahma', 'loc': 'Brahmasthan (Center)', 'attr': 'Supreme Creator, Core Stability & Balance'},
+              {'name': 'Aryama', 'loc': 'East-Central', 'attr': 'Relationships, Marital Harmony, Networking'},
+              {'name': 'Vivasvan', 'loc': 'South-Central', 'attr': 'Fame, Name, Success, Energy Drive'},
+              {'name': 'Mitra', 'loc': 'West-Central', 'attr': 'Alliances, Promises, Commitments'},
+              {'name': 'Bhudhara', 'loc': 'North-Central', 'attr': 'Rest, Rejuvenation, Capability to Heal'},
+              {'name': 'Shikhi', 'loc': 'NE (Ishan Pada 1)', 'attr': 'Ideas, Insights, Higher Consciousness'},
+              {'name': 'Parjanya', 'loc': 'NE (Ishan Pada 2)', 'attr': 'Fertility, Seed Planting, Abundance'},
+              {'name': 'Jayant', 'loc': 'East Pada 3', 'attr': 'Courage, Victory, Determination'},
+              {'name': 'Indra', 'loc': 'East Pada 4', 'attr': 'Supreme Leader, Power, Expansion'},
+              {'name': 'Surya', 'loc': 'East Pada 5', 'attr': 'Authority, Life Force, Health'},
+              {'name': 'Satya', 'loc': 'East Pada 6', 'attr': 'Truth, Goodwill, Fairness in Deals'},
+              {'name': 'Agni', 'loc': 'SE (Agneya Pada 1)', 'attr': 'Cash Flow, Passion, Digestion'},
+              {'name': 'Yama', 'loc': 'South Pada 4', 'attr': 'Discipline, Moral Strength, Law'},
+              {'name': 'Varuna', 'loc': 'West Pada 5', 'attr': 'Liquidity, Rain of Wealth, Emotional Flow'},
+              {'name': 'Soma / Kubera', 'loc': 'North Pada 5', 'attr': 'Treasury, Real Liquid Cash, Prosperity'},
+              {'name': 'Aditi', 'loc': 'NE Edge', 'attr': 'Motherly Peace, Safety, Contentment'},
+              {'name': 'Diti', 'loc': 'NE Edge', 'attr': 'Visionary Thinking, High Ideals'},
+            ];
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('45 Vastu Devtas Directory'), centerTitle: true),
+                body: ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: devtaList.length,
+                  itemBuilder: (context, i) {
+                    var d = devtaList[i];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.amberAccent.withOpacity(0.2),
+                          child: Text('${i + 1}', style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold)),
+                        ),
+                        title: Text(d['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('${d['loc']}\nKey Aspect: ${d['attr']}'),
+                        isThreeLine: true,
+                      ),
+                    );
+                  },
+                ),
+              );
+            }
+          }
+
+          // WINDOW 4: PDF REPORT EXPORT WINDOW
+          class PdfExportWindow extends StatelessWidget {
+            final List<Offset> points;
+            final Offset? centroid;
+            final double northDegree;
+            final int selectedDivision;
+            final ScreenshotController screenshotController;
+
+            const PdfExportWindow({
+              super.key,
+              required this.points,
+              required this.centroid,
+              required this.northDegree,
+              required this.selectedDivision,
+              required this.screenshotController,
+            });
+
+            Future<Uint8List> _generatePdf(PdfPageFormat format) async {
+              final pdf = pw.Document();
+              Uint8List? capturedImageBytes;
+
+              try {
+                capturedImageBytes = await screenshotController.capture();
+              } catch (_) {}
+
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context context) {
+                    return pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Header(
+                          level: 0,
+                          child: pw.Text('Vastu Floor Plan & Centroid Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Text('North Compass Degree: ${northDegree.toInt()}° | Direction Grid: $selectedDivision Zones'),
+                        pw.Text('Plot Boundary Corners: ${points.length} Points (Polygon Centroid Mode)'),
+                        pw.Text('Brahmasthan Status: ${centroid != null ? "Calculated (Center Locked)" : "Incomplete"}'),
+                        pw.SizedBox(height: 15),
+                        if (capturedImageBytes != null)
+                          pw.Center(
+                            child: pw.Image(pw.MemoryImage(capturedImageBytes), height: 260),
+                          ),
+                        pw.SizedBox(height: 20),
+                        pw.Text('Key Vastu Directions Reference:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                        pw.Bullet(text: 'North (Kuber/Water): Wealth, Opportunities, Cash Inflow'),
+                        pw.Bullet(text: 'North-East (Ishan): Mental Clarity, Spiritual Wisdom'),
+                        pw.Bullet(text: 'South-East (Agni): Cash Liquidity, Fire Energy, Digestion'),
+                        pw.Bullet(text: 'South-West (Nairutya): Stability, Mastery, Family Bonding'),
+                      ],
+                    );
+                  },
+                ),
+              );
+
+              return pdf.save();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(title: const Text('Export Vastu PDF Report'), centerTitle: true),
+                body: PdfPreview(
+                  build: (format) => _generatePdf(format),
+                  canChangeOrientation: false,
+                  canChangePageFormat: false,
+                ),
+              );
+            }
+          }
+
+          // CUSTOM PAINTER FOR MAP
           class VastuPainter extends CustomPainter {
             final List<Offset> points;
             final Offset? centroid;
@@ -359,23 +686,22 @@ jobs:
                 ..strokeWidth = 2.0
                 ..style = PaintingStyle.stroke;
 
-              final dotPaint = Paint()
-                ..color = Colors.amberAccent
-                ..style = PaintingStyle.fill;
+              final dotPaint = Paint()..color = Colors.amberAccent;
+              final centroidPaint = Paint()..color = Colors.redAccent;
 
-              final centroidPaint = Paint()
-                ..color = Colors.redAccent
-                ..style = PaintingStyle.fill;
-
-              // 1. Draw Boundary Polygon
               if (points.isNotEmpty) {
                 Path path = Path()..moveTo(points[0].dx, points[0].dy);
                 for (int i = 0; i < points.length; i++) {
-                  canvas.drawCircle(points[i], 6, dotPaint);
+                  canvas.drawCircle(points[i], 7, dotPaint);
+                  canvas.drawCircle(points[i], 12, Paint()..color = Colors.amberAccent.withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+
                   TextPainter(
-                    text: TextSpan(text: ' ${String.fromCharCode(65 + (i % 26))}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    text: TextSpan(
+                      text: ' ${String.fromCharCode(65 + (i % 26))}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
                     textDirection: TextDirection.ltr,
-                  )..layout()..paint(canvas, points[i] + const Offset(6, -10));
+                  )..layout()..paint(canvas, points[i] + const Offset(8, -12));
 
                   if (i > 0) path.lineTo(points[i].dx, points[i].dy);
                 }
@@ -386,18 +712,19 @@ jobs:
                 }
               }
 
-              // 2. Draw Brahmasthan (Center Point)
               if (centroid != null) {
-                canvas.drawCircle(centroid!, 7, centroidPaint);
-                canvas.drawCircle(centroid!, 18, Paint()..color = Colors.redAccent.withOpacity(0.3)..style = PaintingStyle.stroke..strokeWidth = 2);
+                canvas.drawCircle(centroid!, 8, centroidPaint);
+                canvas.drawCircle(centroid!, 20, Paint()..color = Colors.redAccent.withOpacity(0.25)..style = PaintingStyle.stroke..strokeWidth = 2);
 
                 TextPainter(
-                  text: const TextSpan(text: ' Brahmasthan (Center)', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                  text: const TextSpan(
+                    text: ' Brahmasthan',
+                    style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                   textDirection: TextDirection.ltr,
-                )..layout()..paint(canvas, centroid! + const Offset(10, 4));
+                )..layout()..paint(canvas, centroid! + const Offset(12, 4));
 
-                // 3. Draw Vastu Direction Lines & Sectors
-                double radius = 170.0;
+                double radius = 175.0;
                 List<String> activeLabels;
                 if (division == 4) activeLabels = dir4;
                 else if (division == 8) activeLabels = dir8;
@@ -414,17 +741,15 @@ jobs:
                     centroid!.dy + radius * math.sin(angle),
                   );
 
-                  // Radials
                   canvas.drawLine(
                     centroid!,
                     endPoint,
-                    Paint()..color = Colors.amberAccent.withOpacity(0.45)..strokeWidth = 1.0,
+                    Paint()..color = Colors.amberAccent.withOpacity(0.4)..strokeWidth = 1.0,
                   );
 
-                  // Labels
                   Offset textPos = Offset(
-                    centroid!.dx + (radius + 14) * math.cos(angle),
-                    centroid!.dy + (radius + 14) * math.sin(angle),
+                    centroid!.dx + (radius + 15) * math.cos(angle),
+                    centroid!.dy + (radius + 15) * math.sin(angle),
                   );
 
                   TextPainter tp = TextPainter(
@@ -441,7 +766,6 @@ jobs:
                   tp.paint(canvas, textPos - Offset(tp.width / 2, tp.height / 2));
                 }
 
-                // 4. Draw 45 Vastu Devtas Names (Outer Energy Ring)
                 if (showDevtas) {
                   double devtaRadius = radius * 0.72;
                   double devtaStep = 360.0 / devtas45.length;
