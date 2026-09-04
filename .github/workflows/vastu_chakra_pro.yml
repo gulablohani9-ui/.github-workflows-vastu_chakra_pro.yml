@@ -518,137 +518,136 @@ jobs:
               );
             }
 
-            // NUMBERED 81-PADA (45 DEVTAS) GRID WITH NUMBERS 1 TO 45 & CUT ANALYSIS
-            pw.Widget buildVector45DevtaPlate({
+            // EXACT 33% BRAHMA - 77% DEVA/MANUSHYA - 100% PISHACHA RECTANGULAR RADIAL ENGINE
+            pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
               required double degree,
             }) {
-              const List<List<int>> padaMatrix = [
-                [21, 22, 23, 24, 25, 26, 27, 28, 29],
-                [20, 39, 39, 41, 41, 41, 43, 43, 30],
-                [19, 40, 40, 41, 41, 41, 42, 42, 31],
-                [18, 38, 38, 45, 45, 45, 44, 44, 32],
-                [17, 38, 38, 45, 45, 45, 44, 44,  1],
-                [16, 38, 38, 45, 45, 45, 44, 44,  2],
-                [15, 36, 36, 35, 35, 35, 33, 33,  3],
-                [14, 37, 37, 35, 35, 35, 34, 34,  4],
-                [13, 12, 11, 10,  9,  8,  7,  6,  5],
-              ];
+              const List<String> topLabels = ['दिति', 'ईश', 'पर्जन्य', 'जयन्त', 'महेन्द्र', 'सूर्य'];
+              const List<String> rightLabels = ['सत्य', 'भृश', 'अन्तरिक्ष', 'अग्नि', 'पूषा', 'वितथ', 'गृहक्षत', 'यम', 'गन्धर्व', 'भृंग'];
+              const List<String> bottomLabels = ['मृग', 'पितृ', 'दौवारिक', 'सुग्रीव', 'पुष्पदन्त', 'वरुण'];
+              const List<String> leftLabels = ['असुर', 'शोष', 'पापयक्ष्मा', 'रोग', 'नाग', 'मुख्य', 'भल्लाट', 'सोम', 'भुजंग', 'अदिति'];
 
               return pw.Column(
                 children: [
                   pw.Container(
                     width: 360,
-                    height: 340,
-                    decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.2)),
+                    height: 350,
+                    decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.0)),
                     child: pw.Stack(
                       alignment: pw.Alignment.center,
                       children: [
                         if (bgMap != null)
-                          pw.Image(pw.MemoryImage(bgMap), width: 320, height: 320, fit: pw.BoxFit.contain),
+                          pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain),
 
+                        // Rotated Radial Concentric Grid
                         pw.Transform.rotate(
                           angle: (degree) * (math.pi / 180),
                           child: pw.Container(
-                            width: 300,
-                            height: 300,
-                            child: pw.Stack(
-                              alignment: pw.Alignment.center,
-                              children: [
-                                pw.CustomPaint(
-                                  size: const PdfPoint(300, 300),
-                                  painter: (PdfGraphics canvas, PdfPoint size) {
-                                    canvas.setColor(PdfColors.brown700);
-                                    canvas.setLineWidth(0.9);
-                                    double cell = 300 / 9;
+                            width: 270,
+                            height: 310,
+                            child: pw.CustomPaint(
+                              size: const PdfPoint(270, 310),
+                              painter: (PdfGraphics canvas, PdfPoint size) {
+                                double w = 270;
+                                double h = 310;
+                                double cx = w / 2;
+                                double cy = h / 2;
 
-                                    for (int i = 0; i <= 9; i++) {
-                                      canvas.drawLine(i * cell, 0, i * cell, 300);
-                                      canvas.strokePath();
-                                      canvas.drawLine(0, i * cell, 300, i * cell);
-                                      canvas.strokePath();
-                                    }
+                                canvas.setColor(PdfColors.blueGrey800);
+                                canvas.setLineWidth(1.2);
 
-                                    canvas.setColor(PdfColors.deepOrange800);
-                                    canvas.setLineWidth(1.8);
-                                    canvas.drawRect(3 * cell, 3 * cell, 3 * cell, 3 * cell);
-                                    canvas.strokePath();
-                                  },
-                                ),
-                                pw.Table(
-                                  children: List.generate(9, (r) {
-                                    return pw.TableRow(
-                                      children: List.generate(9, (c) {
-                                        int devtaNum = padaMatrix[r][c];
-                                        bool isBrahma = (r >= 3 && r <= 5 && c >= 3 && c <= 5);
-                                        
-                                        if (isBrahma && !(r == 4 && c == 4)) {
-                                          return pw.Container(height: 33.3);
-                                        }
+                                // 1. Outer Box (100% Perimeter - Pishacha Vithi)
+                                canvas.drawRect(5, 5, w - 10, h - 10);
+                                canvas.strokePath();
 
-                                        return pw.Container(
-                                          height: 33.3,
-                                          child: pw.Center(
-                                            child: pw.Text(
-                                              isBrahma ? '45\nBRAHMA' : '$devtaNum',
-                                              textAlign: pw.TextAlign.center,
-                                              style: pw.TextStyle(
-                                                fontSize: isBrahma ? 7.5 : 6.5,
-                                                fontWeight: pw.FontWeight.bold,
-                                                color: isBrahma
-                                                    ? PdfColors.red900
-                                                    : (devtaNum > 32 ? PdfColors.deepOrange900 : PdfColors.brown900),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                    );
-                                  }),
-                                ),
-                              ],
+                                // 2. Intermediate Box (77% - Deva + Manushya Vithi)
+                                double w77 = (w - 10) * 0.77;
+                                double h77 = (h - 10) * 0.77;
+                                canvas.drawRect(cx - w77 / 2, cy - h77 / 2, w77, h77);
+                                canvas.strokePath();
+
+                                // 3. Central Brahma Box (33% - Brahma Vithi)
+                                double w33 = (w - 10) * 0.33;
+                                double h33 = (h - 10) * 0.33;
+                                canvas.setColor(PdfColors.black);
+                                canvas.setLineWidth(1.4);
+                                canvas.drawRect(cx - w33 / 2, cy - h33 / 2, w33, h33);
+                                canvas.strokePath();
+
+                                // Radial Projection Rays from Brahma to Boundary (Deva & Manushya lines)
+                                canvas.setColor(PdfColors.blue800);
+                                canvas.setLineWidth(0.85);
+
+                                void drawRadial(double x1, double y1, double x2, double y2) {
+                                  canvas.drawLine(x1, y1, x2, y2);
+                                  canvas.strokePath();
+                                }
+
+                                // Top Rays
+                                for (int i = 1; i <= 6; i++) {
+                                  double px = 5 + ((w - 10) / 7) * i;
+                                  double bx = (cx - w33 / 2) + (w33 / 7) * i;
+                                  drawRadial(bx, cy - h33 / 2, px, 5);
+                                }
+                                // Bottom Rays
+                                for (int i = 1; i <= 6; i++) {
+                                  double px = 5 + ((w - 10) / 7) * i;
+                                  double bx = (cx - w33 / 2) + (w33 / 7) * i;
+                                  drawRadial(bx, cy + h33 / 2, px, h - 5);
+                                }
+                                // Left Rays
+                                for (int i = 1; i <= 10; i++) {
+                                  double py = 5 + ((h - 10) / 11) * i;
+                                  double by = (cy - h33 / 2) + (h33 / 11) * i;
+                                  drawRadial(cx - w33 / 2, by, 5, py);
+                                }
+                                // Right Rays
+                                for (int i = 1; i <= 10; i++) {
+                                  double py = 5 + ((h - 10) / 11) * i;
+                                  double by = (cy - h33 / 2) + (h33 / 11) * i;
+                                  drawRadial(cx + w33 / 2, by, w - 5, py);
+                                }
+
+                                // 4 Corners to Center Rays
+                                drawRadial(cx - w33 / 2, cy - h33 / 2, 5, 5);
+                                drawRadial(cx + w33 / 2, cy - h33 / 2, w - 5, 5);
+                                drawRadial(cx - w33 / 2, cy + h33 / 2, 5, h - 5);
+                                drawRadial(cx + w33 / 2, cy + h33 / 2, w - 5, h - 5);
+
+                                // Node Red Dots on Perimeter
+                                canvas.setColor(PdfColors.red);
+                                for (int i = 0; i <= 7; i++) {
+                                  canvas.drawCircle(5 + ((w - 10) / 7) * i, 5, 2.5);
+                                  canvas.fillPath();
+                                  canvas.drawCircle(5 + ((w - 10) / 7) * i, h - 5, 2.5);
+                                  canvas.fillPath();
+                                }
+                                for (int i = 0; i <= 11; i++) {
+                                  canvas.drawCircle(5, 5 + ((h - 10) / 11) * i, 2.5);
+                                  canvas.fillPath();
+                                  canvas.drawCircle(w - 5, 5 + ((h - 10) / 11) * i, 2.5);
+                                  canvas.fillPath();
+                                }
+                              },
                             ),
                           ),
                         ),
 
+                        // Center Centroid Node Coordinate
                         pw.Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                          width: 8,
+                          height: 8,
+                          decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.blue900),
+                        ),
+                        pw.Positioned(
+                          child: pw.Text('Brahma (33%)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.blueGrey900)),
                         ),
                       ],
                     ),
                   ),
-                  pw.SizedBox(height: 6),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.all(6),
-                    decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 0.8), color: PdfColors.grey100),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Row(
-                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                          children: [
-                            pw.Text('CUT / COMPRESSED DEVTAS (${degree.toInt()}° TILT):', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
-                            pw.Text('BALANCED CORE DEVTAS:', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
-                          ],
-                        ),
-                        pw.SizedBox(height: 2),
-                        pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Expanded(
-                              child: pw.Text('• ESE / SE Cut: #5 Anil, #6 Pusha, #7 Vitatha (Cash/Digestion Issue)\n• NW Cut: #20 Papyakshma, #21 Roga (Support/Detox Stress)', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800)),
-                            ),
-                            pw.SizedBox(width: 8),
-                            pw.Expanded(
-                              child: pw.Text('• Brahmasthan #45 (Centroid Intact)\n• #17 Varun (Vision), #25 Soma (Wealth Flow)\n• Remedy: Brass Wire & Devta Metal Strips on cut corners', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey800)),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text('45 Devta Grid (Center 33% Brahma, 77% Deva/Manushya, 100% Pishacha)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
                 ],
               );
             }
@@ -992,7 +991,7 @@ jobs:
                 ),
               );
 
-              // 8. 45 ENERGY FIELDS / DEVTA GRID (WITH NUMBERS & CUT ANALYSIS)
+              // 8. 45 ENERGY FIELDS / DEVTA GRID (33%-77%-100% RECTANGULAR RADIAL CONCENTRIC)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1001,7 +1000,7 @@ jobs:
                     children: [
                       buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                       pw.SizedBox(height: 4),
-                      pw.Center(child: buildVector45DevtaPlate(bgMap: mapImageBytes, degree: client.northDegree)),
+                      pw.Center(child: buildConcentric45DevtaPlate(bgMap: mapImageBytes, degree: client.northDegree)),
                       pw.SizedBox(height: 4),
                       pw.Text('45 Devtas Directory:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                       pw.Wrap(
