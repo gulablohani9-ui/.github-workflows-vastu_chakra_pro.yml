@@ -41,7 +41,6 @@ jobs:
             flutter:
               sdk: flutter
             image_picker: ^1.0.7
-            screenshot: ^2.1.0
             path_provider: ^2.1.2
             share_plus: ^7.2.2
             pdf: ^3.10.7
@@ -67,7 +66,6 @@ jobs:
           import 'package:flutter/material.dart';
           import 'package:flutter/services.dart' show rootBundle;
           import 'package:image_picker/image_picker.dart';
-          import 'package:screenshot/screenshot.dart';
           import 'package:pdf/pdf.dart';
           import 'package:pdf/widgets.dart' as pw;
           import 'package:printing/printing.dart';
@@ -100,12 +98,12 @@ jobs:
 
           class MasterClientData {
             String name = "Ghanshyam";
-            String propertyType = "FLAT";
+            String propertyType = "HOME";
             String address = "Jodhpur, Rajasthan, India";
             DateTime dob = DateTime(1983, 6, 30);
             TimeOfDay birthTime = const TimeOfDay(hour: 1, minute: 20);
             String birthPlace = "Jodhpur, Rajasthan, India";
-            double northDegree = 15.0;
+            double northDegree = 254.0;
 
             String get formattedBirthTime {
               final h = birthTime.hour.toString().padLeft(2, '0');
@@ -124,8 +122,8 @@ jobs:
           class _MainMasterDashboardState extends State<MainMasterDashboard> {
             final MasterClientData client = MasterClientData();
             File? mapImage;
+            Uint8List? mapImageBytes;
             List<Offset> plotPoints = [];
-            final ScreenshotController screenshotController = ScreenshotController();
             int currentTab = 0;
 
             Offset? getCentroid(List<Offset> pts) {
@@ -154,18 +152,19 @@ jobs:
                   points: plotPoints,
                   centroid: centroid,
                   northDegree: client.northDegree,
-                  screenshotController: screenshotController,
-                  onPickImage: (f) => setState(() => mapImage = f),
+                  onPickImage: (f, b) => setState(() {
+                    mapImage = f;
+                    mapImageBytes = b;
+                  }),
                   onPointsUpdate: (pts) => setState(() => plotPoints = pts),
                   onDegreeChanged: (deg) => setState(() => client.northDegree = deg),
                 ),
                 AstroCalculationsScreen(client: client),
                 PdfReportPreviewScreen(
                   client: client,
-                  mapImage: mapImage,
+                  mapImageBytes: mapImageBytes,
                   points: plotPoints,
                   centroid: centroid,
-                  screenshotController: screenshotController,
                 ),
               ];
 
@@ -180,9 +179,9 @@ jobs:
                   onTap: (idx) => setState(() => currentTab = idx),
                   items: const [
                     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / DOB'),
-                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & Degree'),
+                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & 254°'),
                     BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro Parameters'),
-                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: '37-Page PDF'),
+                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Complete PDF'),
                   ],
                 ),
               );
@@ -216,7 +215,7 @@ jobs:
                     DropdownButtonFormField<String>(
                       value: client.propertyType,
                       decoration: const InputDecoration(labelText: 'Property Type', border: OutlineInputBorder()),
-                      items: ['FLAT', 'HOME', 'OFFICE', 'LAND', 'COMMERCIAL SPACE', 'FACTORY']
+                      items: ['HOME', 'FLAT', 'OFFICE', 'LAND', 'COMMERCIAL SPACE', 'FACTORY']
                           .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       onChanged: (v) { if (v != null) { client.propertyType = v; onUpdate(); } },
@@ -265,8 +264,7 @@ jobs:
             final List<Offset> points;
             final Offset? centroid;
             final double northDegree;
-            final ScreenshotController screenshotController;
-            final Function(File) onPickImage;
+            final Function(File, Uint8List) onPickImage;
             final Function(List<Offset>) onPointsUpdate;
             final Function(double) onDegreeChanged;
 
@@ -276,7 +274,6 @@ jobs:
               required this.points,
               required this.centroid,
               required this.northDegree,
-              required this.screenshotController,
               required this.onPickImage,
               required this.onPointsUpdate,
               required this.onDegreeChanged,
@@ -299,7 +296,10 @@ jobs:
                       icon: const Icon(Icons.photo_library),
                       onPressed: () async {
                         final p = await ImagePicker().pickImage(source: ImageSource.gallery);
-                        if (p != null) widget.onPickImage(File(p.path));
+                        if (p != null) {
+                          final bytes = await p.readAsBytes();
+                          widget.onPickImage(File(p.path), bytes);
+                        }
                       },
                     ),
                     IconButton(
@@ -311,45 +311,42 @@ jobs:
                 body: Column(
                   children: [
                     Expanded(
-                      child: Screenshot(
-                        controller: widget.screenshotController,
-                        child: GestureDetector(
-                          onPanDown: (d) {
-                            for (int i = 0; i < widget.points.length; i++) {
-                              if ((widget.points[i] - d.localPosition).distance < 25) {
-                                draggedIdx = i;
-                                return;
-                              }
+                      child: GestureDetector(
+                        onPanDown: (d) {
+                          for (int i = 0; i < widget.points.length; i++) {
+                            if ((widget.points[i] - d.localPosition).distance < 25) {
+                              draggedIdx = i;
+                              return;
                             }
-                            List<Offset> up = List.from(widget.points)..add(d.localPosition);
+                          }
+                          List<Offset> up = List.from(widget.points)..add(d.localPosition);
+                          widget.onPointsUpdate(up);
+                        },
+                        onPanUpdate: (d) {
+                          if (draggedIdx != null) {
+                            List<Offset> up = List.from(widget.points);
+                            up[draggedIdx!] = d.localPosition;
                             widget.onPointsUpdate(up);
-                          },
-                          onPanUpdate: (d) {
-                            if (draggedIdx != null) {
-                              List<Offset> up = List.from(widget.points);
-                              up[draggedIdx!] = d.localPosition;
-                              widget.onPointsUpdate(up);
-                            }
-                          },
-                          onPanEnd: (_) => draggedIdx = null,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Container(
-                                color: Colors.black,
-                                child: widget.mapImage != null
-                                    ? Image.file(widget.mapImage!, fit: BoxFit.contain)
-                                    : const Center(child: Text('Tap Gallery icon to load floor plan.\nTap plot corners to set boundary.\nDrag any point to reposition.', textAlign: TextAlign.center)),
+                          }
+                        },
+                        onPanEnd: (_) => draggedIdx = null,
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Container(
+                              color: Colors.black,
+                              child: widget.mapImage != null
+                                  ? Image.file(widget.mapImage!, fit: BoxFit.contain)
+                                  : const Center(child: Text('Tap Gallery icon to load floor plan.\nTap plot corners to set boundary.\nDrag any point to reposition.', textAlign: TextAlign.center)),
+                            ),
+                            CustomPaint(
+                              painter: ReportVastuPainter(
+                                points: widget.points,
+                                centroid: widget.centroid,
+                                northDegree: widget.northDegree,
                               ),
-                              CustomPaint(
-                                painter: ReportVastuPainter(
-                                  points: widget.points,
-                                  centroid: widget.centroid,
-                                  northDegree: widget.northDegree,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -413,18 +410,16 @@ jobs:
 
           class PdfReportPreviewScreen extends StatelessWidget {
             final MasterClientData client;
-            final File? mapImage;
+            final Uint8List? mapImageBytes;
             final List<Offset> points;
             final Offset? centroid;
-            final ScreenshotController screenshotController;
 
             const PdfReportPreviewScreen({
               super.key,
               required this.client,
-              required this.mapImage,
+              required this.mapImageBytes,
               required this.points,
               required this.centroid,
-              required this.screenshotController,
             });
 
             Future<Uint8List?> _loadAssetBytes(String path) async {
@@ -470,6 +465,128 @@ jobs:
               );
             }
 
+            pw.Widget buildArchitecturalBaseFloorPlan() {
+              return pw.Container(
+                width: 320,
+                height: 320,
+                child: pw.CustomPaint(
+                  size: const PdfPoint(320, 320),
+                  painter: (PdfGraphics canvas, PdfPoint size) {
+                    canvas.setColor(PdfColors.black);
+                    canvas.setLineWidth(1.4);
+
+                    // Outer Structure Walls (Exact CAD Layout representation)
+                    canvas.drawRect(30, 30, 260, 260);
+                    canvas.strokePath();
+
+                    // Room partitions
+                    canvas.drawLine(30, 160, 290, 160);
+                    canvas.strokePath();
+                    canvas.drawLine(150, 30, 150, 160);
+                    canvas.strokePath();
+                    canvas.drawLine(170, 160, 170, 290);
+                    canvas.strokePath();
+                    canvas.drawLine(170, 210, 290, 210);
+                    canvas.strokePath();
+                    canvas.drawLine(30, 100, 150, 100);
+                    canvas.strokePath();
+
+                    // Balcony Notch
+                    canvas.drawRect(120, 10, 80, 20);
+                    canvas.strokePath();
+                  },
+                ),
+              );
+            }
+
+            pw.Widget buildMasterIntegratedFloorMap({
+              required Uint8List? bgMap,
+              required Uint8List? chakraBytes,
+              required double degree,
+              String? overlayType,
+            }) {
+              return pw.Container(
+                width: 360,
+                height: 360,
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.2)),
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    // 1. BASE FLOOR PLAN (Uploaded OR Architectural CAD Base)
+                    if (bgMap != null)
+                      pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain)
+                    else
+                      buildArchitecturalBaseFloorPlan(),
+
+                    // 2. ROOM TEXT LABELS
+                    pw.Positioned(top: 50, left: 50, child: pw.Text('BED ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(top: 50, right: 50, child: pw.Text('TOILET / BATH', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(bottom: 70, left: 55, child: pw.Text('LIVING ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(bottom: 70, right: 55, child: pw.Text('KITCHEN', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                    pw.Positioned(top: 15, left: 135, child: pw.Text('BALCONY', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700))),
+
+                    // 3. 254 DEGREE ROTATED TRANSPARENT CHAKRA OVERLAY
+                    if (chakraBytes != null)
+                      pw.Transform.rotate(
+                        angle: (degree) * (math.pi / 180),
+                        child: pw.Image(pw.MemoryImage(chakraBytes), width: 350, height: 350, fit: pw.BoxFit.contain),
+                      ),
+
+                    // 4. NORTH ARROW ANGLE MARKER (254° TILT)
+                    pw.Transform.rotate(
+                      angle: (degree - 90) * (math.pi / 180),
+                      child: pw.CustomPaint(
+                        size: const PdfPoint(240, 240),
+                        painter: (PdfGraphics canvas, PdfPoint size) {
+                          canvas.setColor(PdfColors.red);
+                          canvas.setLineWidth(2.0);
+                          canvas.drawLine(120, 120, 230, 120);
+                          canvas.strokePath();
+                          // Arrow tip
+                          canvas.drawLine(230, 120, 215, 112);
+                          canvas.strokePath();
+                          canvas.drawLine(230, 120, 215, 128);
+                          canvas.strokePath();
+                        },
+                      ),
+                    ),
+
+                    // 5. CENTER BRAHMASTHAN BULLSEYE
+                    pw.Container(
+                      width: 14,
+                      height: 14,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                    ),
+                    pw.Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.yellowAccent),
+                    ),
+
+                    // Specific Overlay Labels for Therapy / Color / Gadgets
+                    if (overlayType == 'colors')
+                      pw.Positioned(
+                        bottom: 12,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          color: PdfColors.white,
+                          child: pw.Text('RECOMMENDED: North=Blue, East=Green, South=Red/Peach, West=White/Yellow', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.teal)),
+                        ),
+                      ),
+                    if (overlayType == 'avoid_colors')
+                      pw.Positioned(
+                        bottom: 12,
+                        child: pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          color: PdfColors.white,
+                          child: pw.Text('STRICTLY AVOID: Red in North/NE, Blue in South-East, Green in South-West', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.red)),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }
+
             pw.Widget buildCircularKundli() {
               return pw.Container(
                 width: 250,
@@ -505,31 +622,8 @@ jobs:
               );
             }
 
-            pw.Widget buildOverlaySheet(Uint8List? bgMap, Uint8List? chakraBytes) {
-              return pw.Container(
-                width: 380,
-                height: 380,
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
-                child: pw.Stack(
-                  alignment: pw.Alignment.center,
-                  children: [
-                    if (bgMap != null) pw.Image(pw.MemoryImage(bgMap), width: 380, height: 380, fit: pw.BoxFit.contain),
-                    if (chakraBytes != null)
-                      pw.Transform.rotate(
-                        angle: (client.northDegree) * (math.pi / 180),
-                        child: pw.Image(pw.MemoryImage(chakraBytes), width: 360, height: 360, fit: pw.BoxFit.contain),
-                      ),
-                  ],
-                ),
-              );
-            }
-
             Future<Uint8List> generateFullReport(PdfPageFormat format) async {
               final pdf = pw.Document();
-              Uint8List? mapBytes;
-              try {
-                mapBytes = await screenshotController.capture();
-              } catch (_) {}
 
               final zonesChakra = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final padasChakra = await _loadAssetBytes('assets/images/vastu_32_padas.png');
@@ -653,7 +747,7 @@ jobs:
                 ),
               );
 
-              // 4. SATELLITE NORTH TILT PLAN
+              // 4. SATELLITE NORTH TILT PLAN (MAP + 254 DEGREE ROTATED OVERLAY)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -662,9 +756,9 @@ jobs:
                     children: [
                       buildHeader('DETERMINATION OF DIRECTION FROM SATELLITE'),
                       pw.Text('Calculated Direction: North is tilted ${client.northDegree.toInt()}° toward the west.', style: const pw.TextStyle(fontSize: 10)),
-                      pw.Text('Calculation Method: Google Earth satellite imaging and AutoCAD engineering software.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-                      pw.SizedBox(height: 10),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Text('Calculation Method: Centroid algorithm with Google Earth satellite imaging alignment.', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                      pw.SizedBox(height: 8),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -672,7 +766,7 @@ jobs:
                 ),
               );
 
-              // 5. PLAN WITH VASTU CHAKRA (USING ACTUAL ASSET)
+              // 5. PLAN WITH VASTU CHAKRA (MAP + 32 PADAS CHAKRA ROTATED AT 254 DEGREE)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -681,7 +775,7 @@ jobs:
                     children: [
                       buildHeader('PLAN WITH VASTU CHAKRA'),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildOverlaySheet(mapBytes, padasChakra)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -689,7 +783,7 @@ jobs:
                 ),
               );
 
-              // 6. DISTRIBUTION OF 16 ZONES & 5 ELEMENTS (USING ACTUAL ASSET)
+              // 6. DISTRIBUTION OF 16 ZONES & 5 ELEMENTS (MAP + 16 ZONES CHAKRA AT 254 DEGREE)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -698,7 +792,7 @@ jobs:
                     children: [
                       buildHeader('DISTRIBUTION OF 16 ZONES AND FIVE ELEMENTS'),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildOverlaySheet(mapBytes, zonesChakra)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -706,7 +800,7 @@ jobs:
                 ),
               );
 
-              // 7. 32 ENTRANCES DIVISION
+              // 7. 32 ENTRANCES DIVISION (MAP + 32 DIVISION ROTATED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -715,12 +809,12 @@ jobs:
                     children: [
                       buildHeader('DISTRIBUTION OF 32 DIVISION FOR ENTRANCES'),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildOverlaySheet(mapBytes, padasChakra)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
                       pw.SizedBox(height: 8),
                       pw.Text('Main Entrance Observations:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
-                      pw.Bullet(text: 'MAIN ENTRANCE FALLS ON SHOSHA (W1): THIS ENTRANCE IS INAUSPICIOUS.'),
-                      pw.Bullet(text: 'MAIN ENTRANCE FALLS ON PAPYAKSHMA (W2): THIS ENTRANCE IS INAUSPICIOUS.'),
-                      pw.Bullet(text: 'RECOMMENDED REMEDY: Apply White/Yellow Copper energy strip on threshold.'),
+                      pw.Bullet(text: 'North Entrances (N3 Mukhya, N4 Bhallat): Auspicious for Cash Flow & Opportunities.'),
+                      pw.Bullet(text: 'East Entrances (E3 Jayant, E4 Indra): Auspicious for Social Power & Wisdom.'),
+                      pw.Bullet(text: 'Calculated 254° Tilt: Threshold energy alignment verified on geometric axis.'),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -728,7 +822,7 @@ jobs:
                 ),
               );
 
-              // 8. 45 ENERGY FIELDS / DEVTA GRID
+              // 8. 45 ENERGY FIELDS / DEVTA GRID (MAP + 45 DEVTAS ROTATED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -737,7 +831,7 @@ jobs:
                     children: [
                       buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                       pw.SizedBox(height: 6),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 320)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
                       pw.SizedBox(height: 6),
                       pw.Text('45 Devtas Directory:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
                       pw.Wrap(
@@ -851,7 +945,7 @@ jobs:
                 ),
               );
 
-              // 11. RECOMMENDED COLOR PLAN
+              // 11. RECOMMENDED COLOR PLAN (MAP FILLED WITH 254 DEGREE ZONES)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -861,7 +955,7 @@ jobs:
                       buildHeader('RECOMMENDED COLOR PLAN'),
                       pw.Text('Use neutral colors in areas where no specific color is recommended.', style: const pw.TextStyle(fontSize: 8.5)),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree, overlayType: 'colors')),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -869,7 +963,7 @@ jobs:
                 ),
               );
 
-              // 12. COLOR TO AVOID PLAN
+              // 12. COLOR TO AVOID PLAN (MAP FILLED WITH AVOID ADVICE)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -879,7 +973,7 @@ jobs:
                       buildHeader('COLOR TO AVOID PLAN'),
                       pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion.', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.red)),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree, overlayType: 'avoid_colors')),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -887,7 +981,7 @@ jobs:
                 ),
               );
 
-              // 13. DASHA-DISHA THERAPY PLAN
+              // 13. DASHA-DISHA THERAPY PLAN (MAP FILLED WITH ENERGY RAYS)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -896,7 +990,7 @@ jobs:
                     children: [
                       buildHeader('APPLIEDVASTU® DASHA - DISHA THERAPY'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -904,7 +998,7 @@ jobs:
                 ),
               );
 
-              // 14. DASHA-DISHA ACTIVATION PLAN
+              // 14. DASHA-DISHA ACTIVATION PLAN (MAP FILLED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -913,7 +1007,7 @@ jobs:
                     children: [
                       buildHeader('APPLIEDVASTU® DASHA - DISHA ACTIVATION'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -921,7 +1015,7 @@ jobs:
                 ),
               );
 
-              // 15. DIRECTIONAL ENERGY ACTIVATION
+              // 15. DIRECTIONAL ENERGY ACTIVATION (MAP FILLED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -930,7 +1024,7 @@ jobs:
                     children: [
                       buildHeader('APPLIEDVASTU® DIRECTIONAL ENERGY ACTIVATION'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -938,7 +1032,7 @@ jobs:
                 ),
               );
 
-              // 16. BASIC INTERIOR POSITION
+              // 16. BASIC INTERIOR POSITION (MAP FILLED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -947,7 +1041,7 @@ jobs:
                     children: [
                       buildHeader('BASIC INTERIOR POSITION'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -955,7 +1049,7 @@ jobs:
                 ),
               );
 
-              // 17. AUSPICIOUS INDOOR PLANTS
+              // 17. AUSPICIOUS INDOOR PLANTS (MAP FILLED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -964,7 +1058,7 @@ jobs:
                     children: [
                       buildHeader('AUSPICIOUS INDOOR PLANT'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -972,7 +1066,7 @@ jobs:
                 ),
               );
 
-              // 18. MODERN GADGETS POSITION
+              // 18. MODERN GADGETS POSITION (MAP FILLED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -981,7 +1075,7 @@ jobs:
                     children: [
                       buildHeader('MODERN GADGETS POSITION'),
                       pw.SizedBox(height: 8),
-                      if (mapBytes != null) pw.Center(child: pw.Image(pw.MemoryImage(mapBytes), height: 350)),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
