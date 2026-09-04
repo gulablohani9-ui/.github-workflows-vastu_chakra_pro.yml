@@ -1,4 +1,4 @@
-name: Build AstroVastu 37-Page Exact Suite APK
+name: Build Glohani Vastu 37-Page Suite APK
 
 on:
   push:
@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate 37-Page AstroVastu Master Suite
+      - name: Generate Glohani Vastu Master Suite
         run: |
           rm -rf lib android
-          flutter create --template=app --org=com.astro.vastureport --project-name=astrovastu_report_pro . --overwrite
+          flutter create --template=app --org=com.glohani.vastureport --project-name=glohani_vastu_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
-          name: astrovastu_report_pro
-          description: Exact 37-Page Applied Vastu Professional Evaluation Suite
+          name: glohani_vastu_pro
+          description: Glohani Vastu Exact 37-Page Professional Evaluation Suite
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -72,16 +72,16 @@ jobs:
           import 'package:intl/intl.dart';
 
           void main() {
-            runApp(const AstroVastuApp());
+            runApp(const GlohaniVastuApp());
           }
 
-          class AstroVastuApp extends StatelessWidget {
-            const AstroVastuApp({super.key});
+          class GlohaniVastuApp extends StatelessWidget {
+            const GlohaniVastuApp({super.key});
 
             @override
             Widget build(BuildContext context) {
               return MaterialApp(
-                title: 'AstroVastu 37-Page Master',
+                title: 'Glohani Vastu Pro',
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData.dark().copyWith(
                   scaffoldBackgroundColor: const Color(0xFF121212),
@@ -179,9 +179,9 @@ jobs:
                   onTap: (idx) => setState(() => currentTab = idx),
                   items: const [
                     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / DOB'),
-                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & 254°'),
+                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & Degree'),
                     BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro Parameters'),
-                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Complete PDF'),
+                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Glohani PDF'),
                   ],
                 ),
               );
@@ -438,8 +438,8 @@ jobs:
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('AppliedVastu®', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                      pw.Text('www.appliedvastu.com', style: const pw.TextStyle(fontSize: 8, color: PdfColors.blue800)),
+                      pw.Text('Glohani Vastu', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                      pw.Text('www.glohanivastu.com', style: const pw.TextStyle(fontSize: 8, color: PdfColors.blue800)),
                     ],
                   ),
                   pw.Text('ACCURATE COMBINATION OF DASHA & DISHA', style: const pw.TextStyle(fontSize: 7.5, fontStyle: pw.FontStyle.italic, color: PdfColors.teal)),
@@ -457,72 +457,11 @@ jobs:
                   pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
-                      pw.Text('Sample Vastu Evaluation Report: CopyRight & TradeMark® By AppliedVastu', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600)),
-                      pw.Text('Email: info@appliedvastu.com', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600)),
+                      pw.Text('Sample Vastu Evaluation Report: Glohani Vastu All Rights Reserved', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600)),
+                      pw.Text('Email: info@glohanivastu.com', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.grey600)),
                     ],
                   ),
                 ],
-              );
-            }
-
-            pw.Widget buildDynamicColorRoomPlan({
-              required double degree,
-              required bool isAvoidPlan,
-            }) {
-              double rad = (degree - 90) * (math.pi / 180.0);
-              
-              PdfColor getColorForDirection(double localAngleRad) {
-                double totalAngle = (localAngleRad + rad) % (2 * math.pi);
-                if (totalAngle < 0) totalAngle += 2 * math.pi;
-                double deg = totalAngle * (180.0 / math.pi);
-
-                if (!isAvoidPlan) {
-                  if (deg >= 337.5 || deg < 22.5) return PdfColors.blue700;
-                  if (deg >= 22.5 && deg < 67.5) return PdfColors.cyan700;
-                  if (deg >= 67.5 && deg < 112.5) return PdfColors.green700;
-                  if (deg >= 112.5 && deg < 157.5) return PdfColors.lightGreen700;
-                  if (deg >= 157.5 && deg < 202.5) return PdfColors.red700;
-                  if (deg >= 202.5 && deg < 247.5) return PdfColors.amber700;
-                  if (deg >= 247.5 && deg < 292.5) return PdfColors.grey600;
-                  return PdfColors.grey400;
-                } else {
-                  if (deg >= 337.5 || deg < 22.5) return PdfColors.red700;
-                  if (deg >= 67.5 && deg < 112.5) return PdfColors.blueGrey700;
-                  if (deg >= 157.5 && deg < 202.5) return PdfColors.blue700;
-                  if (deg >= 202.5 && deg < 247.5) return PdfColors.green700;
-                  return PdfColors.deepOrange700;
-                }
-              }
-
-              return pw.Container(
-                width: 320,
-                height: 320,
-                child: pw.CustomPaint(
-                  size: const PdfPoint(320, 320),
-                  painter: (PdfGraphics canvas, PdfPoint size) {
-                    PdfColor cTopLeft = getColorForDirection(-3 * math.pi / 4);
-                    PdfColor cTopRight = getColorForDirection(-math.pi / 4);
-                    PdfColor cBottomLeft = getColorForDirection(3 * math.pi / 4);
-                    PdfColor cBottomRight = getColorForDirection(math.pi / 4);
-
-                    canvas.setColor(cTopLeft);
-                    canvas.setLineWidth(3.0);
-                    canvas.drawRect(35, 35, 120, 120);
-                    canvas.strokePath();
-
-                    canvas.setColor(cTopRight);
-                    canvas.drawRect(165, 35, 120, 120);
-                    canvas.strokePath();
-
-                    canvas.setColor(cBottomLeft);
-                    canvas.drawRect(35, 165, 120, 120);
-                    canvas.strokePath();
-
-                    canvas.setColor(cBottomRight);
-                    canvas.drawRect(165, 165, 120, 120);
-                    canvas.strokePath();
-                  },
-                ),
               );
             }
 
@@ -530,7 +469,6 @@ jobs:
               required Uint8List? bgMap,
               required Uint8List? chakraBytes,
               required double degree,
-              String? overlayType,
             }) {
               return pw.Container(
                 width: 360,
@@ -540,34 +478,7 @@ jobs:
                   alignment: pw.Alignment.center,
                   children: [
                     if (bgMap != null)
-                      pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain)
-                    else if (overlayType == 'colors')
-                      buildDynamicColorRoomPlan(degree: degree, isAvoidPlan: false)
-                    else if (overlayType == 'avoid_colors')
-                      buildDynamicColorRoomPlan(degree: degree, isAvoidPlan: true)
-                    else
-                      pw.Container(
-                        width: 300,
-                        height: 300,
-                        child: pw.CustomPaint(
-                          size: const PdfPoint(300, 300),
-                          painter: (PdfGraphics canvas, PdfPoint size) {
-                            canvas.setColor(PdfColors.black);
-                            canvas.setLineWidth(1.4);
-                            canvas.drawRect(20, 20, 260, 260);
-                            canvas.strokePath();
-                            canvas.drawLine(20, 150, 280, 150);
-                            canvas.strokePath();
-                            canvas.drawLine(150, 20, 150, 280);
-                            canvas.strokePath();
-                          },
-                        ),
-                      ),
-
-                    pw.Positioned(top: 45, left: 45, child: pw.Text('BED ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(top: 45, right: 45, child: pw.Text('TOILET / BATH', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(bottom: 65, left: 45, child: pw.Text('LIVING ROOM', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
-                    pw.Positioned(bottom: 65, right: 45, child: pw.Text('KITCHEN', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.grey800))),
+                      pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain),
 
                     if (chakraBytes != null)
                       pw.Transform.rotate(
@@ -602,25 +513,41 @@ jobs:
                       height: 6,
                       decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.yellowAccent),
                     ),
+                  ],
+                ),
+              );
+            }
 
-                    if (overlayType == 'colors')
-                      pw.Positioned(
-                        bottom: 8,
-                        child: pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          color: PdfColors.white,
-                          child: pw.Text('RECOMMENDED: North=Blue, East=Green, South=Red/Peach, West=White/Yellow', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.teal)),
-                        ),
+            // Dedicated Frame Wrapper for Page 11 & Page 12 using User Assets
+            pw.Widget buildFloorPlanInColorFrame({
+              required Uint8List? bgMap,
+              required Uint8List? frameBytes,
+              required double degree,
+            }) {
+              return pw.Container(
+                width: 360,
+                height: 360,
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    // Center Fitted Floor Plan
+                    if (bgMap != null)
+                      pw.Container(
+                        width: 280,
+                        height: 280,
+                        child: pw.Image(pw.MemoryImage(bgMap), fit: pw.BoxFit.contain),
                       ),
-                    if (overlayType == 'avoid_colors')
-                      pw.Positioned(
-                        bottom: 8,
-                        child: pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          color: PdfColors.white,
-                          child: pw.Text('STRICTLY AVOID: Red in North/NE, Blue in South-East, Green in South-West', style: const pw.TextStyle(fontSize: 7.5, color: PdfColors.red)),
-                        ),
-                      ),
+
+                    // Outer Frame Asset
+                    if (frameBytes != null)
+                      pw.Image(pw.MemoryImage(frameBytes), width: 360, height: 360, fit: pw.BoxFit.fill),
+
+                    // Center Bullseye
+                    pw.Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                    ),
                   ],
                 ),
               );
@@ -666,6 +593,8 @@ jobs:
 
               final zonesChakra = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final padasChakra = await _loadAssetBytes('assets/images/vastu_32_padas.png');
+              final recFrame = await _loadAssetBytes('assets/images/recommended_colors_frame.png');
+              final avoidFrame = await _loadAssetBytes('assets/images/avoid_colors_frame.png');
 
               // 1. COVER PAGE
               pdf.addPage(
@@ -711,7 +640,7 @@ jobs:
                           ),
                         ),
                         pw.SizedBox(height: 6),
-                        pw.Text('AppliedVastu® - ACCURATE COMBINATION OF DASHA & DISHA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                        pw.Text('Glohani Vastu - ACCURATE COMBINATION OF DASHA & DISHA', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                         pw.Text('Comprehensive 16 Zones, 32 Padas, 45 Devtas, and Astro-Vastu Evaluation', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
                       ],
                     ),
@@ -764,12 +693,12 @@ jobs:
                         '2. Analysis of 16 Vastu Zones and Five Elements',
                         '3. Calculation of Main Door Positions (32 Divisions)',
                         '4. Distribution of 45 Energy Fields / Devtas Grid',
-                        '5. AppliedVastu Zonal Strength Area Graph (16 Zones Balance)',
+                        '5. Glohani Vastu Zonal Strength Area Graph (16 Zones Balance)',
                         '6. 17 Zones Architectural Activity & Remarks Evaluation',
                         '7. Advised Vastu Colors for Elemental Balancing',
                         '8. Advice on Which Colors to Avoid with Zones',
                         '9. Astro-Vastu Remedy for the Flat',
-                        '10. AppliedVastu Object Therapy and Energy Activation',
+                        '10. Glohani Vastu Object Therapy and Energy Activation',
                         '11. Dasha-Disha Directional Activation Therapy',
                         '12. Basic Vastu Interior Positions (Bed, Kitchen, Wardrobe)',
                         '13. Indoor Plants Vastu Corrections for the Flat',
@@ -945,7 +874,7 @@ jobs:
                     return pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        buildHeader('APPLIED VASTU ZONAL STRENGTH GRAPH'),
+                        buildHeader('GLOHANI VASTU ZONAL STRENGTH GRAPH'),
                         pw.Text('Upper Balance Line: 1.34 | Balance Line: 1.00 | Lower Balance Line: 0.65', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                         pw.SizedBox(height: 15),
                         pw.Container(
@@ -984,7 +913,7 @@ jobs:
                 ),
               );
 
-              // 11. RECOMMENDED COLOR PLAN
+              // 11. RECOMMENDED COLOR PLAN (USING EXACT USER FRAME ASSET)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -992,9 +921,9 @@ jobs:
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       buildHeader('RECOMMENDED COLOR PLAN'),
-                      pw.Text('Colors dynamically assigned according to the ${client.northDegree.toInt()}° North orientation.', style: const pw.TextStyle(fontSize: 8.5)),
+                      pw.Text('Use neutral colors in areas where no specific color is recommended.', style: const pw.TextStyle(fontSize: 8.5)),
                       pw.SizedBox(height: 8),
-                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree, overlayType: 'colors')),
+                      pw.Center(child: buildFloorPlanInColorFrame(bgMap: mapImageBytes, frameBytes: recFrame, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -1002,7 +931,7 @@ jobs:
                 ),
               );
 
-              // 12. COLOR TO AVOID PLAN
+              // 12. COLOR TO AVOID PLAN (USING EXACT USER AVOID FRAME ASSET)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1012,7 +941,7 @@ jobs:
                       buildHeader('COLOR TO AVOID PLAN'),
                       pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion.', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.red)),
                       pw.SizedBox(height: 8),
-                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree, overlayType: 'avoid_colors')),
+                      pw.Center(child: buildFloorPlanInColorFrame(bgMap: mapImageBytes, frameBytes: avoidFrame, degree: client.northDegree)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -1027,7 +956,7 @@ jobs:
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('APPLIEDVASTU® DASHA - DISHA THERAPY'),
+                      buildHeader('GLOHANI VASTU DASHA - DISHA THERAPY'),
                       pw.SizedBox(height: 8),
                       pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
@@ -1044,7 +973,7 @@ jobs:
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('APPLIEDVASTU® DASHA - DISHA ACTIVATION'),
+                      buildHeader('GLOHANI VASTU DASHA - DISHA ACTIVATION'),
                       pw.SizedBox(height: 8),
                       pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
                       pw.Spacer(),
@@ -1061,7 +990,7 @@ jobs:
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('APPLIEDVASTU® DIRECTIONAL ENERGY ACTIVATION'),
+                      buildHeader('GLOHANI VASTU DIRECTIONAL ENERGY ACTIVATION'),
                       pw.SizedBox(height: 8),
                       pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
                       pw.Spacer(),
@@ -1129,7 +1058,7 @@ jobs:
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('APPLIED VASTU® DASHA-DISHA COMBINATIONS'),
+                      buildHeader('GLOHANI VASTU DASHA-DISHA COMBINATIONS'),
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
@@ -1186,7 +1115,7 @@ jobs:
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('APPLIED VASTU® PLANET & HOUSE COMBINATIONS'),
+                      buildHeader('GLOHANI VASTU PLANET & HOUSE COMBINATIONS'),
                       pw.SizedBox(height: 6),
                       pw.Table.fromTextArray(
                         headers: ['Planet', 'Level - 1', 'Level - 2', 'Level - 3', 'Level - 4'],
@@ -1368,14 +1297,14 @@ jobs:
                     crossAxisAlignment: pw.CrossAxisAlignment.center,
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
-                      pw.Text('AppliedVastu® Consultancy Services', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                      pw.Text('Glohani Vastu Consultancy Services', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
                       pw.Text('World-class Scientific & Astro-Vastu Architectural Solutions', style: const pw.TextStyle(fontSize: 10, color: PdfColors.teal)),
                       pw.SizedBox(height: 20),
                       pw.Text('Services Offered:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
                       pw.Text('• Plot Selection & Energy Activation | Flat / Commercial Vastu\n• Non-Demolition Energy Rectification | Astro-Vastu Kundli Mapping\n• Factory & Industrial Layout Design | Numerology Remedial Alignment', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 9.5, height: 1.4)),
                       pw.SizedBox(height: 30),
                       pw.Text('Contact & Correspondence:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                      pw.Text('AppliedVastu Center, Budherhat Rd, Kolkata-700094\nPhone: +91-8777614891 | Email: info@appliedvastu.com', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
+                      pw.Text('Glohani Vastu Center, Budherhat Rd, Kolkata-700094\nPhone: +91-8777614891 | Email: info@glohanivastu.com', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
                     ],
                   ),
                 ),
@@ -1457,12 +1386,12 @@ jobs:
         run: |
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.astro.vastureport">
+              package="com.glohani.vastureport">
               <uses-permission android:name="android.permission.CAMERA"/>
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
              <application
-                  android:label="AstroVastu Report Pro"
+                  android:label="Glohani Vastu Pro"
                   android:name="${applicationName}"
                   android:icon="@mipmap/ic_launcher">
                   <meta-data
@@ -1494,9 +1423,9 @@ jobs:
       - name: Upload APK Artifact
         run: |
           mkdir -p artifact_dir
-          cp build/app/outputs/flutter-apk/app-release.apk artifact_dir/AstroVastu-Report-Pro.apk
+          cp build/app/outputs/flutter-apk/app-release.apk artifact_dir/Glohani-Vastu-Report-Pro.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: AstroVastu-Report-Pro
-          path: artifact_dir/AstroVastu-Report-Pro.apk
+          name: Glohani-Vastu-Report-Pro
+          path: artifact_dir/Glohani-Vastu-Report-Pro.apk
