@@ -518,7 +518,85 @@ jobs:
               );
             }
 
-            // PURE VECTOR 100% TRANSPARENT COLOR FRAME (REPLACES STATIC PNG)
+            // PURE VECTOR 81-PADA 45 DEVTA GRID (100% TRANSPARENT OVERLAY)
+            pw.Widget buildVector45DevtaPlate({
+              required Uint8List? bgMap,
+              required double degree,
+            }) {
+              return pw.Container(
+                width: 360,
+                height: 360,
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.2)),
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    if (bgMap != null)
+                      pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain),
+
+                    pw.Transform.rotate(
+                      angle: (degree) * (math.pi / 180),
+                      child: pw.Container(
+                        width: 320,
+                        height: 320,
+                        child: pw.Stack(
+                          alignment: pw.Alignment.center,
+                          children: [
+                            pw.CustomPaint(
+                              size: const PdfPoint(320, 320),
+                              painter: (PdfGraphics canvas, PdfPoint size) {
+                                canvas.setColor(PdfColors.brown700);
+                                canvas.setLineWidth(1.2);
+                                double cell = 320 / 9;
+
+                                for (int i = 0; i <= 9; i++) {
+                                  canvas.drawLine(i * cell, 0, i * cell, 320);
+                                  canvas.strokePath();
+                                  canvas.drawLine(0, i * cell, 320, i * cell);
+                                  canvas.strokePath();
+                                }
+
+                                canvas.setColor(PdfColors.deepOrange800);
+                                canvas.setLineWidth(2.0);
+                                canvas.drawRect(3 * cell, 3 * cell, 3 * cell, 3 * cell);
+                                canvas.strokePath();
+                              },
+                            ),
+                            // Central Brahma Field
+                            pw.Text('BRAHMA\n(9 Pada)', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.deepOrange900)),
+
+                            // Inner 4 Mahadevtas
+                            pw.Positioned(top: 45, child: pw.Text('PRUTHVIDHAR', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900))),
+                            pw.Positioned(bottom: 45, child: pw.Text('VAIVASVAT', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900))),
+                            pw.Positioned(left: 45, child: pw.Text('MAITRAGAN', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900))),
+                            pw.Positioned(right: 45, child: pw.Text('ARYAMA', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown900))),
+
+                            // Corner Devtas
+                            pw.Positioned(top: 45, left: 45, child: pw.Text('RUDRA', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.brown800))),
+                            pw.Positioned(top: 45, right: 45, child: pw.Text('APAVATSA', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.brown800))),
+                            pw.Positioned(bottom: 45, left: 45, child: pw.Text('INDRA/JAY', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.brown800))),
+                            pw.Positioned(bottom: 45, right: 45, child: pw.Text('SAVITRA', style: const pw.TextStyle(fontSize: 6.5, color: PdfColors.brown800))),
+
+                            // Outer 4 Corners
+                            pw.Positioned(top: 8, left: 8, child: pw.Text('ROG', style: const pw.TextStyle(fontSize: 7, color: PdfColors.brown900))),
+                            pw.Positioned(top: 8, right: 8, child: pw.Text('ISH', style: const pw.TextStyle(fontSize: 7, color: PdfColors.brown900))),
+                            pw.Positioned(bottom: 8, left: 8, child: pw.Text('PITRU', style: const pw.TextStyle(fontSize: 7, color: PdfColors.brown900))),
+                            pw.Positioned(bottom: 8, right: 8, child: pw.Text('AGNI', style: const pw.TextStyle(fontSize: 7, color: PdfColors.brown900))),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    pw.Container(
+                      width: 14,
+                      height: 14,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // PURE VECTOR 100% TRANSPARENT COLOR FRAME
             pw.Widget buildVectorColorPlanPlate({
               required Uint8List? bgMap,
               required double degree,
@@ -551,7 +629,6 @@ jobs:
                       child: pw.Stack(
                         alignment: pw.Alignment.center,
                         children: [
-                          // 1. Center Floor Plan (100% Visible & Transparent)
                           if (bgMap != null)
                             pw.Container(
                               width: 300,
@@ -559,14 +636,12 @@ jobs:
                               child: pw.Image(pw.MemoryImage(bgMap), fit: pw.BoxFit.contain),
                             ),
 
-                          // 2. Center Bullseye Marker
                           pw.Container(
                             width: 12,
                             height: 12,
                             decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
                           ),
 
-                          // 3. Top Color Band
                           pw.Positioned(
                             top: 0,
                             left: 0,
@@ -575,8 +650,6 @@ jobs:
                               children: topColors.map((c) => pw.Expanded(child: pw.Container(height: 18, color: c))).toList(),
                             ),
                           ),
-
-                          // 4. Bottom Color Band
                           pw.Positioned(
                             bottom: 0,
                             left: 0,
@@ -585,8 +658,6 @@ jobs:
                               children: bottomColors.map((c) => pw.Expanded(child: pw.Container(height: 18, color: c))).toList(),
                             ),
                           ),
-
-                          // 5. Left Color Band
                           pw.Positioned(
                             top: 18,
                             bottom: 18,
@@ -595,8 +666,6 @@ jobs:
                               children: leftColors.map((c) => pw.Expanded(child: pw.Container(width: 18, color: c))).toList(),
                             ),
                           ),
-
-                          // 6. Right Color Band
                           pw.Positioned(
                             top: 18,
                             bottom: 18,
@@ -606,7 +675,6 @@ jobs:
                             ),
                           ),
 
-                          // Inner Boundary Line
                           pw.Container(
                             width: 314,
                             height: 314,
@@ -867,7 +935,7 @@ jobs:
                 ),
               );
 
-              // 8. 45 ENERGY FIELDS / DEVTA GRID
+              // 8. 45 ENERGY FIELDS / DEVTA GRID (VECTOR INTEGRATED)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -876,7 +944,7 @@ jobs:
                     children: [
                       buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: padasChakra, degree: client.northDegree)),
+                      pw.Center(child: buildVector45DevtaPlate(bgMap: mapImageBytes, degree: client.northDegree)),
                       pw.SizedBox(height: 6),
                       pw.Text('45 Devtas Directory:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
                       pw.Wrap(
@@ -990,7 +1058,7 @@ jobs:
                 ),
               );
 
-              // 11. RECOMMENDED COLOR PLAN (100% CLEAR FLOOR PLAN INSIDE COLOR BARS)
+              // 11. RECOMMENDED COLOR PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1007,7 +1075,7 @@ jobs:
                 ),
               );
 
-              // 12. COLOR TO AVOID PLAN (100% CLEAR FLOOR PLAN INSIDE AVOID BARS)
+              // 12. COLOR TO AVOID PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
