@@ -128,7 +128,7 @@ jobs:
             File? mapImage;
             Uint8List? mapImageBytes;
             List<Offset> plotPoints = [];
-            int currentTab = 1; // Start on Map editor directly
+            int currentTab = 1;
 
             Offset? getCentroid(List<Offset> pts) {
               if (pts.length < 3) return null;
@@ -295,23 +295,10 @@ jobs:
           class _VastuMapEditorState extends State<VastuMapEditor> {
             int? draggedIdx;
             double pixelsPerFoot = 4.0;
-
-            @override
-            void initState() {
-              super.initState();
-              if (widget.points.isEmpty) {
-                // Initialize default 4 rectangular corner points on grid
-                widget.points.addAll([
-                  const Offset(50, 400),
-                  Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400),
-                  Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400 - widget.client.plotLength * pixelsPerFoot),
-                  Offset(50, 400 - widget.client.plotLength * pixelsPerFoot),
-                ]);
-              }
-            }
+            bool isDotMode = false; // Mode toggle: Zoom Map vs Draw Dots
 
             void recalculateDimensionsFromPoints() {
-              if (widget.points.length >= 4) {
+              if (widget.points.length >= 3) {
                 double minX = widget.points.map((p) => p.dx).reduce(math.min);
                 double maxX = widget.points.map((p) => p.dx).reduce(math.max);
                 double minY = widget.points.map((p) => p.dy).reduce(math.min);
@@ -331,10 +318,11 @@ jobs:
             Widget build(BuildContext context) {
               return Scaffold(
                 appBar: AppBar(
-                  title: Text('Live Scale: ${widget.client.plotWidth}ft x ${widget.client.plotLength}ft'),
+                  title: Text('Plot: ${widget.client.plotWidth}ft x ${widget.client.plotLength}ft'),
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.photo_library),
+                      tooltip: 'Upload Floor Plan',
                       onPressed: () async {
                         final p = await ImagePicker().pickImage(source: ImageSource.gallery);
                         if (p != null) {
@@ -344,17 +332,12 @@ jobs:
                       },
                     ),
                     IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.redAccent),
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      tooltip: 'Clear Dots',
                       onPressed: () {
                         setState(() {
                           widget.points.clear();
-                          widget.points.addAll([
-                            const Offset(50, 400),
-                            Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400),
-                            Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400 - widget.client.plotLength * pixelsPerFoot),
-                            Offset(50, 400 - widget.client.plotLength * pixelsPerFoot),
-                          ]);
-                          widget.onPointsUpdate(List.from(widget.points));
+                          widget.onPointsUpdate([]);
                         });
                       },
                     )
@@ -362,66 +345,102 @@ jobs:
                 ),
                 body: Column(
                   children: [
+                    // Mode Switcher Banner
                     Container(
-                      color: const Color(0xFF2A2A2A),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      color: const Color(0xFF242424),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Width: ${widget.client.plotWidth} ft', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent)),
-                          Text('Length: ${widget.client.plotLength} ft', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
-                          Text('Total: ${(widget.client.plotWidth * widget.client.plotLength).toStringAsFixed(0)} sq.ft', style: const TextStyle(color: Colors.white70)),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: !isDotMode ? Colors.teal : Colors.grey[800],
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.pinch, size: 16),
+                              label: const Text('1. Zoom/Fit Map', style: TextStyle(fontSize: 12)),
+                              onPressed: () => setState(() => isDotMode = false),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDotMode ? Colors.amber[800] : Colors.grey[800],
+                                foregroundColor: Colors.white,
+                              ),
+                              icon: const Icon(Icons.touch_app, size: 16),
+                              label: const Text('2. Move/Add Dots', style: TextStyle(fontSize: 12)),
+                              onPressed: () => setState(() => isDotMode = true),
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     Expanded(
-                      child: GestureDetector(
-                        onPanDown: (d) {
-                          for (int i = 0; i < widget.points.length; i++) {
-                            if ((widget.points[i] - d.localPosition).distance < 28) {
-                              draggedIdx = i;
-                              return;
-                            }
-                          }
-                        },
-                        onPanUpdate: (d) {
-                          if (draggedIdx != null) {
-                            setState(() {
-                              widget.points[draggedIdx!] = d.localPosition;
-                              widget.onPointsUpdate(List.from(widget.points));
-                              recalculateDimensionsFromPoints();
-                            });
-                          }
-                        },
-                        onPanEnd: (_) => draggedIdx = null,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Container(
-                              color: const Color(0xFF1E1E1E),
-                              child: widget.mapImage != null
-                                  ? InteractiveViewer(
-                                      maxScale: 4.0,
-                                      minScale: 0.5,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Base: Zoomable & Pannable Floor Plan
+                          Container(
+                            color: const Color(0xFF181818),
+                            child: widget.mapImage != null
+                                ? InteractiveViewer(
+                                    maxScale: 6.0,
+                                    minScale: 0.2,
+                                    panEnabled: !isDotMode,
+                                    scaleEnabled: !isDotMode,
+                                    child: Center(
                                       child: Image.file(widget.mapImage!, fit: BoxFit.contain),
-                                    )
-                                  : const Center(child: Text('Tap gallery icon to upload floor plan.\nDrag Red dots to calibrate plot corners.')),
-                            ),
-                            CustomPaint(
-                              painter: RulerAndPlotPainter(
-                                points: widget.points,
-                                centroid: widget.centroid,
-                                pixelsPerFoot: pixelsPerFoot,
-                                northDegree: widget.northDegree,
+                                    ),
+                                  )
+                                : const Center(child: Text('Tap Gallery icon to load map.\nUse Mode 1 to Resize/Fit.\nUse Mode 2 to place corner dots.')),
+                          ),
+
+                          // Overlay Layer for Dots & Grid
+                          IgnorePointer(
+                            ignoring: !isDotMode,
+                            child: GestureDetector(
+                              onPanDown: (d) {
+                                for (int i = 0; i < widget.points.length; i++) {
+                                  if ((widget.points[i] - d.localPosition).distance < 28) {
+                                    draggedIdx = i;
+                                    return;
+                                  }
+                                }
+                                // Tap to add irregular corner dot
+                                setState(() {
+                                  widget.points.add(d.localPosition);
+                                  widget.onPointsUpdate(List.from(widget.points));
+                                  recalculateDimensionsFromPoints();
+                                });
+                              },
+                              onPanUpdate: (d) {
+                                if (draggedIdx != null) {
+                                  setState(() {
+                                    widget.points[draggedIdx!] = d.localPosition;
+                                    widget.onPointsUpdate(List.from(widget.points));
+                                    recalculateDimensionsFromPoints();
+                                  });
+                                }
+                              },
+                              onPanEnd: (_) => draggedIdx = null,
+                              child: CustomPaint(
+                                painter: RulerAndPlotPainter(
+                                  points: widget.points,
+                                  centroid: widget.centroid,
+                                  pixelsPerFoot: pixelsPerFoot,
+                                  northDegree: widget.northDegree,
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                     Container(
                       color: const Color(0xFF1E1E1E),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       child: Row(
                         children: [
                           const Text('North: ', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
@@ -461,19 +480,18 @@ jobs:
               final gridPaint = Paint()..color = Colors.white12..strokeWidth = 0.8;
               final axisPaint = Paint()..color = Colors.tealAccent..strokeWidth = 1.4;
               final borderPaint = Paint()..color = Colors.amberAccent..strokeWidth = 2.0..style = PaintingStyle.stroke;
-              final fillPaint = Paint()..color = Colors.amber.withOpacity(0.08)..style = PaintingStyle.fill;
+              final fillPaint = Paint()..color = Colors.amber.withOpacity(0.12)..style = PaintingStyle.fill;
               final dotPaint = Paint()..color = Colors.redAccent;
 
-              // 1. Draw Feet Ruler Lines & Numbers on X & Y Axis (GeoGebra Style)
               double originX = 35.0;
               double originY = size.height - 35.0;
 
-              // Y-Axis (Vertical ft)
+              // Y-Axis
               canvas.drawLine(Offset(originX, 10), Offset(originX, originY), axisPaint);
-              // X-Axis (Horizontal ft)
+              // X-Axis
               canvas.drawLine(Offset(originX, originY), Offset(size.width - 10, originY), axisPaint);
 
-              for (int ft = 0; ft <= 100; ft += 10) {
+              for (int ft = 0; ft <= 120; ft += 10) {
                 double px = originX + ft * pixelsPerFoot;
                 if (px < size.width) {
                   canvas.drawLine(Offset(px, 10), Offset(px, originY), gridPaint);
@@ -493,23 +511,23 @@ jobs:
                 }
               }
 
-              // 2. Draw Draggable Plot Shape
               if (points.isNotEmpty) {
                 Path path = Path()..moveTo(points[0].dx, points[0].dy);
                 for (int i = 1; i < points.length; i++) {
                   path.lineTo(points[i].dx, points[i].dy);
                 }
-                path.close();
-                canvas.drawPath(path, fillPaint);
-                canvas.drawPath(path, borderPaint);
+                if (points.length >= 3) {
+                  path.close();
+                  canvas.drawPath(path, fillPaint);
+                  canvas.drawPath(path, borderPaint);
+                }
 
                 for (int i = 0; i < points.length; i++) {
-                  canvas.drawCircle(points[i], 8, dotPaint);
+                  canvas.drawCircle(points[i], 9, dotPaint);
                   canvas.drawCircle(points[i], 3, Paint()..color = Colors.white);
                 }
               }
 
-              // 3. Draw Centroid & North Angle
               if (centroid != null) {
                 canvas.drawCircle(centroid!, 6, Paint()..color = Colors.tealAccent);
                 double rad = (northDegree - 90) * (math.pi / 180);
