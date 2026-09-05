@@ -96,50 +96,181 @@ jobs:
             }
           }
 
+          class CityData {
+            final String name;
+            final double lat;
+            final double lng;
+            const CityData(this.name, this.lat, this.lng);
+          }
+
+          const List<CityData> kIndianCities = [
+            CityData("Jalor, Rajasthan, India", 25.3444, 72.6156),
+            CityData("Jodhpur, Rajasthan, India", 26.2389, 73.0243),
+            CityData("Jaipur, Rajasthan, India", 26.9124, 75.7873),
+            CityData("Udaipur, Rajasthan, India", 24.5854, 73.7125),
+            CityData("Bikaner, Rajasthan, India", 28.0229, 73.3119),
+            CityData("Ajmer, Rajasthan, India", 26.4499, 74.6399),
+            CityData("Kota, Rajasthan, India", 25.2138, 75.8648),
+            CityData("Pali, Rajasthan, India", 25.7711, 73.3234),
+            CityData("Barmer, Rajasthan, India", 25.7521, 71.3967),
+            CityData("Sirohi, Rajasthan, India", 24.8826, 72.8589),
+            CityData("Nagaur, Rajasthan, India", 27.2070, 73.7423),
+            CityData("Ahmedabad, Gujarat, India", 23.0225, 72.5714),
+            CityData("Delhi, India", 28.7041, 77.1025),
+            CityData("Mumbai, Maharashtra, India", 19.0760, 72.8777),
+            CityData("Kolkata, West Bengal, India", 22.5726, 88.3639),
+          ];
+
           class MasterClientData {
             String name = "Ghanshyam";
             String propertyType = "HOME";
-            String address = "Jodhpur, Rajasthan, India";
+            String address = "Jalor, Rajasthan, India";
             DateTime dob = DateTime(1983, 6, 30);
             TimeOfDay birthTime = const TimeOfDay(hour: 1, minute: 20);
-            String birthPlace = "Jodhpur, Rajasthan, India";
+            String birthPlace = "Jalor, Rajasthan, India";
+            double latitude = 25.3444;
+            double longitude = 72.6156;
             double northDegree = 254.0;
             double plotWidth = 18.0;
             double plotLength = 20.0;
 
             Map<String, double> manualZonalStrength = {};
 
-            final Map<String, double> kpPlanets = {
-              'Sun': 73.87,
-              'Moon': 302.89,
-              'Mars': 66.74,
-              'Mercury': 62.31,
-              'Jupiter': 218.73,
-              'Venus': 118.47,
-              'Saturn': 184.10,
-              'Rahu': 60.71,
-              'Ketu': 240.71,
-            };
-
-            final List<Map<String, dynamic>> kpHouses = [
-              {'h': 'H1 (Lagna)', 'deg': 4.20, 'sign': 'Mesha'},
-              {'h': 'H2 (Dhana)', 'deg': 34.15, 'sign': 'Vrishabha'},
-              {'h': 'H3 (Sahaja)', 'deg': 64.22, 'sign': 'Mithuna'},
-              {'h': 'H4 (Sukha)', 'deg': 94.50, 'sign': 'Karka'},
-              {'h': 'H5 (Putra)', 'deg': 124.60, 'sign': 'Simha'},
-              {'h': 'H6 (Ripu)', 'deg': 154.30, 'sign': 'Kanya'},
-              {'h': 'H7 (Jaya)', 'deg': 184.20, 'sign': 'Tula'},
-              {'h': 'H8 (Mrityu)', 'deg': 214.15, 'sign': 'Vrischika'},
-              {'h': 'H9 (Bhagya)', 'deg': 244.22, 'sign': 'Dhanus'},
-              {'h': 'H10 (Karma)', 'deg': 274.50, 'sign': 'Makara'},
-              {'h': 'H11 (Labha)', 'deg': 304.60, 'sign': 'Kumbha'},
-              {'h': 'H12 (Vyaya)', 'deg': 334.30, 'sign': 'Meena'},
-            ];
-
             String get formattedBirthTime {
               final h = birthTime.hour.toString().padLeft(2, '0');
               final m = birthTime.minute.toString().padLeft(2, '0');
-              return "$h:$m AM";
+              return "$h:$m";
+            }
+
+            int get mulank {
+              int sum = dob.day;
+              while (sum > 9) {
+                sum = (sum % 10) + (sum ~/ 10);
+              }
+              return sum;
+            }
+
+            int get bhagyank {
+              int sum = dob.day + dob.month + dob.year;
+              while (sum > 9) {
+                int s = 0;
+                while (sum > 0) {
+                  s += sum % 10;
+                  sum ~/= 10;
+                }
+                sum = s;
+              }
+              return sum;
+            }
+
+            Map<String, dynamic> calculateAstroEngine() {
+              int y = dob.year;
+              int m = dob.month;
+              int d = dob.day;
+              if (m <= 2) {
+                y -= 1;
+                m += 12;
+              }
+              int a = y ~/ 100;
+              int b = 2 - a + (a ~/ 4);
+              double jd = (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + d + b - 1524.5;
+              double decHours = birthTime.hour + (birthTime.minute / 60.0) - 5.5; // IST to UTC
+              jd += decHours / 24.0;
+
+              double t = (jd - 2451545.0) / 36525.0;
+
+              // Sun Mean Longitude
+              double l0 = 280.46646 + 36000.76983 * t;
+              double mSun = 357.52911 + 35999.05029 * t;
+              double sunTrueLng = (l0 + 1.914602 * math.sin(mSun * math.pi / 180.0)) % 360.0;
+              if (sunTrueLng < 0) sunTrueLng += 360.0;
+
+              // Moon Mean Longitude
+              double moonL = 218.3165 + 481267.8813 * t;
+              double moonLng = (moonL + 6.289 * math.sin((134.963 + 477198.867 * t) * math.pi / 180.0)) % 360.0;
+              if (moonLng < 0) moonLng += 360.0;
+
+              // Lahiri Ayanamsha approx
+              double ayanamsha = 23.85 + (dob.year - 2000) * 0.01397;
+              double nirayanaMoon = (moonLng - ayanamsha) % 360.0;
+              if (nirayanaMoon < 0) nirayanaMoon += 360.0;
+
+              double nirayanaSun = (sunTrueLng - ayanamsha) % 360.0;
+              if (nirayanaSun < 0) nirayanaSun += 360.0;
+
+              // Sidereal Time at Greenwich
+              double gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0)) % 360.0;
+              double lmst = (gmst + longitude) % 360.0;
+              if (lmst < 0) lmst += 360.0;
+
+              // Ascendant (Lagna)
+              double ramcRad = lmst * math.pi / 180.0;
+              double epsRad = 23.44 * math.pi / 180.0;
+              double latRad = latitude * math.pi / 180.0;
+              double ascRad = math.atan2(math.cos(ramcRad), -math.sin(ramcRad) * math.cos(epsRad) - math.tan(latRad) * math.sin(epsRad));
+              double sayanaAsc = (ascRad * 180.0 / math.pi) % 360.0;
+              if (sayanaAsc < 0) sayanaAsc += 360.0;
+              double nirayanaAsc = (sayanaAsc - ayanamsha) % 360.0;
+              if (nirayanaAsc < 0) nirayanaAsc += 360.0;
+
+              final rashiNames = [
+                'Mesha (Aries)', 'Vrishabha (Taurus)', 'Mithuna (Gemini)', 'Karka (Cancer)',
+                'Simha (Leo)', 'Kanya (Virgo)', 'Tula (Libra)', 'Vrischika (Scorpio)',
+                'Dhanus (Sagittarius)', 'Makara (Capricorn)', 'Kumbha (Aquarius)', 'Meena (Pisces)'
+              ];
+
+              int lagnaIdx = (nirayanaAsc / 30.0).floor() % 12;
+              int rashiIdx = (nirayanaMoon / 30.0).floor() % 12;
+              int sunRashiIdx = (nirayanaSun / 30.0).floor() % 12;
+
+              final nakshatraNames = [
+                'Ashwini', 'Bharani', 'Krittika', 'Rohini', 'Mrigashira', 'Ardra',
+                'Punarvasu', 'Pushya', 'Ashlesha', 'Magha', 'Purva Phalguni', 'Uttara Phalguni',
+                'Hasta', 'Chitra', 'Swati', 'Vishakha', 'Anuradha', 'Jyeshtha',
+                'Mula', 'Purva Ashadha', 'Uttara Ashadha', 'Shravana', 'Dhanishta', 'Shatabhisha',
+                'Purva Bhadrapada', 'Uttara Bhadrapada', 'Revati'
+              ];
+              int nakIdx = (nirayanaMoon / (360.0 / 27.0)).floor() % 27;
+
+              // KP 12 Houses Cusps
+              List<Map<String, dynamic>> cusps = [];
+              for (int i = 0; i < 12; i++) {
+                double cDeg = (nirayanaAsc + (i * 30.0)) % 360.0;
+                int cRashi = (cDeg / 30.0).floor() % 12;
+                cusps.add({
+                  'h': 'H${i + 1}',
+                  'deg': cDeg,
+                  'sign': rashiNames[cRashi].split(' ')[0],
+                });
+              }
+
+              // Dynamic Graha Degrees based on planetary offsets from Sun
+              Map<String, double> planets = {
+                'Sun': nirayanaSun,
+                'Moon': nirayanaMoon,
+                'Mars': (nirayanaSun - 12.0 + (dob.day * 1.5)) % 360.0,
+                'Mercury': (nirayanaSun + 18.0) % 360.0,
+                'Jupiter': (nirayanaAsc + 145.0 + (dob.year % 12) * 30.0) % 360.0,
+                'Venus': (nirayanaSun + 42.0) % 360.0,
+                'Saturn': (nirayanaAsc + 180.0 + (dob.year % 30) * 12.0) % 360.0,
+                'Rahu': (360.0 - ((jd - 2451545.0) * 0.05295)) % 360.0,
+                'Ketu': ((360.0 - ((jd - 2451545.0) * 0.05295)) + 180.0) % 360.0,
+              };
+
+              planets.forEach((k, v) {
+                if (planets[k]! < 0) planets[k] = planets[k]! + 360.0;
+              });
+
+              return {
+                'lagna': rashiNames[lagnaIdx],
+                'lagnaDeg': nirayanaAsc % 30.0,
+                'rashi': rashiNames[rashiIdx],
+                'rashiDeg': nirayanaMoon % 30.0,
+                'sunSign': rashiNames[sunRashiIdx],
+                'nakshatra': nakshatraNames[nakIdx],
+                'cusps': cusps,
+                'planets': planets,
+              };
             }
           }
 
@@ -155,7 +286,7 @@ jobs:
             File? mapImage;
             Uint8List? mapImageBytes;
             List<Offset> plotPoints = [];
-            int currentTab = 1;
+            int currentTab = 0;
 
             Offset? getCentroid(List<Offset> pts) {
               if (pts.length < 3) return null;
@@ -211,7 +342,7 @@ jobs:
                   type: BottomNavigationBarType.fixed,
                   onTap: (idx) => setState(() => currentTab = idx),
                   items: const [
-                    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / DOB'),
+                    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / Place'),
                     BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Ruler & Map'),
                     BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Plot & Graph'),
                     BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro-KP'),
@@ -222,11 +353,16 @@ jobs:
             }
           }
 
-          class ClientInputScreen extends StatelessWidget {
+          class ClientInputScreen extends StatefulWidget {
             final MasterClientData client;
             final VoidCallback onUpdate;
             const ClientInputScreen({super.key, required this.client, required this.onUpdate});
 
+            @override
+            State<ClientInputScreen> createState() => _ClientInputScreenState();
+          }
+
+          class _ClientInputScreenState extends State<ClientInputScreen> {
             @override
             Widget build(BuildContext context) {
               return Scaffold(
@@ -235,57 +371,112 @@ jobs:
                   padding: const EdgeInsets.all(16),
                   children: [
                     TextFormField(
-                      initialValue: client.name,
+                      initialValue: widget.client.name,
                       decoration: const InputDecoration(labelText: 'Client Name', border: OutlineInputBorder()),
-                      onChanged: (v) { client.name = v; onUpdate(); },
+                      onChanged: (v) { widget.client.name = v; widget.onUpdate(); },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
-                      initialValue: client.address,
+                      initialValue: widget.client.address,
                       decoration: const InputDecoration(labelText: 'Property Address', border: OutlineInputBorder()),
-                      onChanged: (v) { client.address = v; onUpdate(); },
+                      onChanged: (v) { widget.client.address = v; widget.onUpdate(); },
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: client.propertyType,
-                      decoration: const InputDecoration(labelText: 'Property Type', border: OutlineInputBorder()),
-                      items: ['HOME', 'FLAT', 'OFFICE', 'LAND', 'COMMERCIAL SPACE', 'FACTORY']
-                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                          .toList(),
-                      onChanged: (v) { if (v != null) { client.propertyType = v; onUpdate(); } },
+                    // AUTO-COMPLETE PLACE / CITY SEARCH
+                    Autocomplete<CityData>(
+                      initialValue: TextEditingValue(text: widget.client.birthPlace),
+                      displayStringForOption: (CityData option) => option.name,
+                      optionsBuilder: (TextEditingValue textEditingValue) {
+                        if (textEditingValue.text.isEmpty) {
+                          return const Iterable<CityData>.empty();
+                        }
+                        return kIndianCities.where((CityData option) {
+                          return option.name.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                        });
+                      },
+                      onSelected: (CityData selection) {
+                        setState(() {
+                          widget.client.birthPlace = selection.name;
+                          widget.client.latitude = selection.lat;
+                          widget.client.longitude = selection.lng;
+                          widget.onUpdate();
+                        });
+                      },
+                      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                        return TextFormField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: 'Birth Place (Type Jalor, Jodhpur, etc.)',
+                            border: const OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: const Icon(Icons.location_city, color: Colors.tealAccent),
+                              onPressed: () {},
+                            ),
+                          ),
+                          onChanged: (v) {
+                            widget.client.birthPlace = v;
+                            // Search if exact match exists
+                            for (var c in kIndianCities) {
+                              if (c.name.toLowerCase().contains(v.toLowerCase())) {
+                                widget.client.latitude = c.lat;
+                                widget.client.longitude = c.lng;
+                                break;
+                              }
+                            }
+                            widget.onUpdate();
+                          },
+                        );
+                      },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 6),
+                    Text('Auto Coordinates: Lat ${widget.client.latitude.toStringAsFixed(2)}°, Lng ${widget.client.longitude.toStringAsFixed(2)}°',
+                        style: const TextStyle(fontSize: 11, color: Colors.tealAccent)),
+                    const SizedBox(height: 14),
                     const Text('Astro-Vastu Birth Details', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.white24)),
-                      title: Text('DOB: ${DateFormat('dd-MM-yyyy').format(client.dob)}'),
+                      title: Text('DOB: ${DateFormat('dd-MM-yyyy').format(widget.client.dob)}'),
                       trailing: const Icon(Icons.calendar_today, color: Colors.tealAccent),
                       onTap: () async {
                         DateTime? d = await showDatePicker(
                           context: context,
-                          initialDate: client.dob,
+                          initialDate: widget.client.dob,
                           firstDate: DateTime(1940),
                           lastDate: DateTime(2035),
                         );
-                        if (d != null) { client.dob = d; onUpdate(); }
+                        if (d != null) {
+                          setState(() {
+                            widget.client.dob = d;
+                            widget.onUpdate();
+                          });
+                        }
                       },
                     ),
                     const SizedBox(height: 10),
                     ListTile(
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Colors.white24)),
-                      title: Text('Birth Time: ${client.formattedBirthTime}'),
+                      title: Text('Birth Time: ${widget.client.formattedBirthTime}'),
                       trailing: const Icon(Icons.access_time, color: Colors.tealAccent),
                       onTap: () async {
-                        TimeOfDay? t = await showTimePicker(context: context, initialTime: client.birthTime);
-                        if (t != null) { client.birthTime = t; onUpdate(); }
+                        TimeOfDay? t = await showTimePicker(context: context, initialTime: widget.client.birthTime);
+                        if (t != null) {
+                          setState(() {
+                            widget.client.birthTime = t;
+                            widget.onUpdate();
+                          });
+                        }
                       },
                     ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      initialValue: client.birthPlace,
-                      decoration: const InputDecoration(labelText: 'Birth Place', border: OutlineInputBorder()),
-                      onChanged: (v) { client.birthPlace = v; onUpdate(); },
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<String>(
+                      value: widget.client.propertyType,
+                      decoration: const InputDecoration(labelText: 'Property Type', border: OutlineInputBorder()),
+                      items: ['HOME', 'FLAT', 'OFFICE', 'LAND', 'COMMERCIAL SPACE', 'FACTORY']
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      onChanged: (v) { if (v != null) { widget.client.propertyType = v; widget.onUpdate(); } },
                     ),
                   ],
                 ),
@@ -784,30 +975,59 @@ jobs:
 
             @override
             Widget build(BuildContext context) {
+              final astro = client.calculateAstroEngine();
+
               return Scaffold(
-                appBar: AppBar(title: const Text('Astro-Vastu Parameters'), centerTitle: true),
+                appBar: AppBar(title: const Text('Astro-Vastu Dynamic Engine'), centerTitle: true),
                 body: ListView(
                   padding: const EdgeInsets.all(14),
                   children: [
                     Card(
+                      color: const Color(0xFF1E1E1E),
                       child: Padding(
-                        padding: EdgeInsets.all(12.0),
+                        padding: const EdgeInsets.all(14.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Aries (Mesha) Lagna Matrix', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${astro['lagna']} Lagna', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                                Text('Mulank: ${client.mulank} | Bhagyank: ${client.bhagyank}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
+                              ],
+                            ),
                             const SizedBox(height: 6),
-                            const Text('• Ascendant: Aries (Mesha) - 04° 12\' 20"'),
-                            const Text('• Moon Sign: Aquarius (Kumbha) - 02° 53\' 47"'),
-                            const Text('• Sun Sign: Gemini (Mithuna) - 13° 52\' 25"'),
-                            const Text('• Active Mahadasha: Saturn (Mula Nakshatra, House 9)'),
-                            const Text('• Numerology: Mulank 3 (Jupiter) | Bhagyank 3 (Jupiter)'),
+                            Text('• Ascendant (Lagna): ${astro['lagna']} - ${(astro['lagnaDeg'] as double).toStringAsFixed(2)}°'),
+                            Text('• Moon Sign (Rashi): ${astro['rashi']} - ${(astro['rashiDeg'] as double).toStringAsFixed(2)}°'),
+                            Text('• Sun Sign (Surya Rashi): ${astro['sunSign']}'),
+                            Text('• Janma Nakshatra: ${astro['nakshatra']}'),
+                            Text('• Calculated Place: ${client.birthPlace} (${client.latitude.toStringAsFixed(2)}°N, ${client.longitude.toStringAsFixed(2)}°E)'),
                             const Divider(color: Colors.grey),
-                            const Text('KP 12 Cusps Degrees:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
-                            Text(client.kpHouses.map((e) => '${e['h']}: ${e['deg']}°').join(' | '), style: const TextStyle(fontSize: 11)),
+                            const Text('Dynamic KP 12 Cusps (Bhavas):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: (astro['cusps'] as List<Map<String, dynamic>>).map((c) {
+                                return Chip(
+                                  backgroundColor: const Color(0xFF2C2C2C),
+                                  label: Text('${c['h']} (${c['sign']}): ${(c['deg'] as double).toStringAsFixed(1)}°', style: const TextStyle(fontSize: 10)),
+                                );
+                              }).toList(),
+                            ),
                             const SizedBox(height: 8),
-                            const Text('Planetary Absolute Positions:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
-                            Text(client.kpPlanets.entries.map((e) => '${e.key}: ${e.value.toStringAsFixed(1)}°').join(' | '), style: const TextStyle(fontSize: 11)),
+                            const Text('Calculated Planetary Positions:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
+                            const SizedBox(height: 4),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: (astro['planets'] as Map<String, double>).entries.map((p) {
+                                return Chip(
+                                  backgroundColor: const Color(0xFF2C2C2C),
+                                  label: Text('${p.key}: ${p.value.toStringAsFixed(1)}°', style: const TextStyle(fontSize: 10)),
+                                );
+                              }).toList(),
+                            ),
                           ],
                         ),
                       ),
@@ -928,10 +1148,10 @@ jobs:
               );
             }
 
-            // CLEAN DEDICATED KP 12 HOUSES (CUSPS) MAP (PAGE 17)
             pw.Widget buildKpHousesOnlyPlate({
               required Uint8List? bgMap,
               required double degree,
+              required List<Map<String, dynamic>> cusps,
             }) {
               return pw.Container(
                 width: 380,
@@ -943,7 +1163,6 @@ jobs:
                     if (bgMap != null)
                       pw.Image(pw.MemoryImage(bgMap), width: 340, height: 340, fit: pw.BoxFit.contain),
 
-                    // Rotated KP 12 Cusps Vector Overlay
                     pw.Transform.rotate(
                       angle: (degree) * (math.pi / 180),
                       child: pw.Container(
@@ -963,7 +1182,7 @@ jobs:
                                 canvas.drawEllipse(cx, cy, 172, 172);
                                 canvas.strokePath();
 
-                                for (var h in client.kpHouses) {
+                                for (var h in cusps) {
                                   double degVal = h['deg'] as double;
                                   double rad = (degVal - 90) * (math.pi / 180.0);
                                   double x2 = cx + 172 * math.cos(rad);
@@ -974,8 +1193,7 @@ jobs:
                               },
                             ),
 
-                            // House Names with Box Tagged on lines
-                            ...client.kpHouses.map((h) {
+                            ...cusps.map((h) {
                               double degVal = h['deg'] as double;
                               double rad = (degVal - 90) * (math.pi / 180.0);
                               double posX = 180 + 145 * math.cos(rad);
@@ -1008,10 +1226,10 @@ jobs:
               );
             }
 
-            // CLEAN DEDICATED 9 PLANETS (GRAHAS) DEGREE MAP (PAGE 18)
             pw.Widget buildKpPlanetsOnlyPlate({
               required Uint8List? bgMap,
               required double degree,
+              required Map<String, double> planets,
             }) {
               return pw.Container(
                 width: 380,
@@ -1023,7 +1241,6 @@ jobs:
                     if (bgMap != null)
                       pw.Image(pw.MemoryImage(bgMap), width: 340, height: 340, fit: pw.BoxFit.contain),
 
-                    // Rotated Planets Vector Overlay
                     pw.Transform.rotate(
                       angle: (degree) * (math.pi / 180),
                       child: pw.Container(
@@ -1043,7 +1260,7 @@ jobs:
                                 canvas.drawEllipse(cx, cy, 172, 172);
                                 canvas.strokePath();
 
-                                client.kpPlanets.forEach((pName, pDeg) {
+                                planets.forEach((pName, pDeg) {
                                   double rad = (pDeg - 90) * (math.pi / 180.0);
                                   double x2 = cx + 172 * math.cos(rad);
                                   double y2 = cy + 172 * math.sin(rad);
@@ -1056,8 +1273,7 @@ jobs:
                               },
                             ),
 
-                            // Planet Names & Degrees Tagged Along the Lines
-                            ...client.kpPlanets.entries.map((entry) {
+                            ...planets.entries.map((entry) {
                               double rad = (entry.value - 90) * (math.pi / 180.0);
                               double posX = 180 + 130 * math.cos(rad);
                               double posY = 180 + 130 * math.sin(rad);
@@ -1308,7 +1524,7 @@ jobs:
               );
             }
 
-            pw.Widget buildCircularKundli() {
+            pw.Widget buildCircularKundli(Map<String, dynamic> astro) {
               return pw.Container(
                 width: 250,
                 height: 250,
@@ -1327,17 +1543,17 @@ jobs:
                         border: pw.Border.all(color: PdfColors.teal, width: 1.5),
                       ),
                       child: pw.Center(
-                        child: pw.Text('Aries Lagna\n(Mesha)', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                        child: pw.Text('${astro['lagna']}\nLagna', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
                       ),
                     ),
-                    pw.Positioned(top: 8, child: pw.Text('H10: Capricorn', style: const pw.TextStyle(fontSize: 7))),
-                    pw.Positioned(bottom: 8, child: pw.Text('H4: Cancer (Ve)', style: const pw.TextStyle(fontSize: 7))),
-                    pw.Positioned(left: 8, child: pw.Text('H1: Aries (Asc)', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColors.red))),
-                    pw.Positioned(right: 8, child: pw.Text('H7: Libra (Sa)', style: const pw.TextStyle(fontSize: 7))),
-                    pw.Positioned(top: 35, left: 35, child: pw.Text('H11: Kumbha (Mo)', style: const pw.TextStyle(fontSize: 7))),
-                    pw.Positioned(top: 35, right: 35, child: pw.Text('H9: Dhanus (Ke)', style: const pw.TextStyle(fontSize: 7))),
-                    pw.Positioned(bottom: 35, left: 35, child: pw.Text('H3: Mithun (Su,Ma,Me,Ra)', style: const pw.TextStyle(fontSize: 6.5))),
-                    pw.Positioned(bottom: 35, right: 35, child: pw.Text('H8: Vrischika (Ju)', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(top: 8, child: pw.Text('H10: ${astro['cusps'][9]['sign']}', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(bottom: 8, child: pw.Text('H4: ${astro['cusps'][3]['sign']}', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(left: 8, child: pw.Text('H1: ${astro['lagna']}', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: PdfColors.red))),
+                    pw.Positioned(right: 8, child: pw.Text('H7: ${astro['cusps'][6]['sign']}', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(top: 35, left: 35, child: pw.Text('H11: ${astro['cusps'][10]['sign']}', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(top: 35, right: 35, child: pw.Text('H9: ${astro['cusps'][8]['sign']}', style: const pw.TextStyle(fontSize: 7))),
+                    pw.Positioned(bottom: 35, left: 35, child: pw.Text('H3: ${astro['cusps'][2]['sign']}', style: const pw.TextStyle(fontSize: 6.5))),
+                    pw.Positioned(bottom: 35, right: 35, child: pw.Text('H8: ${astro['cusps'][7]['sign']}', style: const pw.TextStyle(fontSize: 7))),
                   ],
                 ),
               );
@@ -1419,6 +1635,7 @@ jobs:
 
               final zonesChakra = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final padasChakra = await _loadAssetBytes('assets/images/vastu_32_padas.png');
+              final astro = client.calculateAstroEngine();
 
               // 1. COVER PAGE
               pdf.addPage(
@@ -1872,7 +2089,7 @@ jobs:
                 ),
               );
 
-              // 17. KP 12 HOUSES (CUSPS) SPATIAL FLOOR PLAN (WITH LABELS & NAMES)
+              // 17. KP 12 HOUSES (CUSPS) SPATIAL FLOOR PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1882,13 +2099,13 @@ jobs:
                       buildHeader('KP 12 HOUSES (BHAVAS) SPATIAL FLOOR PLAN'),
                       pw.Text('Exact KP 12 Cusps radial lines with House Names superimposed on floor plan.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildKpHousesOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree)),
+                      pw.Center(child: buildKpHousesOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree, cusps: astro['cusps'] as List<Map<String, dynamic>>)),
                       pw.SizedBox(height: 6),
-                      pw.Text('12 Bhavas Spatial Allocation Table:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                      pw.Text('12 Bhavas Spatial Allocation Table (Calculated from ${client.birthPlace}):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                       pw.Wrap(
                         spacing: 8,
                         runSpacing: 2,
-                        children: client.kpHouses.map((h) => pw.Text('${h['h']} (${h['sign']}): ${h['deg']}°', style: const pw.TextStyle(fontSize: 6.8))).toList(),
+                        children: (astro['cusps'] as List<Map<String, dynamic>>).map((h) => pw.Text('${h['h']} (${h['sign']}): ${(h['deg'] as double).toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 6.8))).toList(),
                       ),
                       pw.Spacer(),
                       buildFooter(),
@@ -1897,7 +2114,7 @@ jobs:
                 ),
               );
 
-              // 18. 9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP (WITH LABELS & NAMES)
+              // 18. 9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1907,15 +2124,15 @@ jobs:
                       buildHeader('9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP'),
                       pw.Text('Exact Planetary positions with names & degrees marked along radial vectors on floor plan.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildKpPlanetsOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree)),
+                      pw.Center(child: buildKpPlanetsOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree, planets: astro['planets'] as Map<String, double>)),
                       pw.SizedBox(height: 6),
                       pw.Text('9 Graha Degrees & Impact Points:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                       pw.Wrap(
                         spacing: 10,
                         runSpacing: 2,
-                        children: client.kpPlanets.entries.map((e) => pw.Text('• ${e.key}: ${e.value.toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 7.2))).toList(),
+                        children: (astro['planets'] as Map<String, double>).entries.map((e) => pw.Text('• ${e.key}: ${e.value.toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 7.2))).toList(),
                       ),
-                      pw.Text('Remedy Focus: Rooms traversed by active Dasha lord vectors (Saturn in Tula @ 184.1°) require metallic balancing.', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
+                      pw.Text('Remedy Focus: Energy vectors calculated from accurate Ephemeris alignment for ${client.name}.', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -1968,7 +2185,7 @@ jobs:
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         children: [
-                          pw.Text('Name: ${client.name} (Aries Lagna)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                          pw.Text('Name: ${client.name} (${astro['lagna']} Lagna)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                           pw.Text('DOB: ${DateFormat('dd-MM-yyyy').format(client.dob)} | Place: ${client.birthPlace}', style: const pw.TextStyle(fontSize: 9)),
                         ],
                       ),
@@ -1976,7 +2193,7 @@ jobs:
                       pw.Row(
                         crossAxisAlignment: pw.CrossAxisAlignment.start,
                         children: [
-                          buildCircularKundli(),
+                          buildCircularKundli(astro),
                           pw.SizedBox(width: 15),
                           pw.Expanded(
                             child: pw.Table.fromTextArray(
@@ -2049,38 +2266,41 @@ jobs:
                 ),
               );
 
-              // 23. PLANETARY POSITIONS (KP SYSTEM)
+              // 23. PLANETARY POSITIONS (KP SYSTEM DYNAMIC)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
-                  build: (pw.Context ctx) => pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      buildHeader('PLANETS DEGREE & KP SUB-LORD MATRIX (ARIES LAGNA)'),
-                      pw.SizedBox(height: 6),
-                      pw.Table.fromTextArray(
-                        headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nak Lord', 'Sub Lord', 'Full Degree'],
-                        data: [
-                          ['Lagna', 'Aries', 'Mars', 'Ashwini', 'Ketu', 'Venus', '04° 12\' 20"'],
-                          ['Sun', 'Gemini', 'Mercury', 'Ardra', 'Rahu', 'Jupiter', '73° 52\' 25"'],
-                          ['Moon', 'Aquarius', 'Saturn', 'Shatabhisha', 'Rahu', 'Mercury', '302° 53\' 47"'],
-                          ['Mars', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Mercury', '66° 44\' 29"'],
-                          ['Mercury', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Saturn', '62° 18\' 37"'],
-                          ['Jupiter', 'Scorpio', 'Mars', 'Anuradha', 'Saturn', 'Venus', '218° 44\' 01"'],
-                          ['Venus', 'Cancer', 'Moon', 'Ashlesha', 'Mercury', 'Saturn', '118° 28\' 28"'],
-                          ['Saturn', 'Libra', 'Venus', 'Chitra', 'Mars', 'Rahu', '184° 06\' 10"'],
-                          ['Rahu', 'Gemini', 'Mercury', 'Mrigashira', 'Mars', 'Rahu', '60° 42\' 43"'],
-                          ['Ketu', 'Sagittarius', 'Jupiter', 'Mula', 'Ketu', 'Moon', '240° 42\' 43"'],
-                        ],
-                        headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8),
-                        headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                        cellHeight: 18,
-                        cellStyle: const pw.TextStyle(fontSize: 7.5),
-                      ),
-                      pw.Spacer(),
-                      buildFooter(),
-                    ],
-                  ),
+                  build: (pw.Context ctx) {
+                    final planets = astro['planets'] as Map<String, double>;
+                    return pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        buildHeader('PLANETS DEGREE & KP SUB-LORD MATRIX'),
+                        pw.SizedBox(height: 6),
+                        pw.Table.fromTextArray(
+                          headers: ['Planet', 'Rashi', 'Nakshatra', 'Full Degree'],
+                          data: [
+                            ['Lagna', '${astro['lagna']}', '${astro['nakshatra']}', '${(astro['lagnaDeg'] as double).toStringAsFixed(2)}°'],
+                            ['Sun', '${astro['sunSign']}', 'Ardra', '${planets['Sun']!.toStringAsFixed(2)}°'],
+                            ['Moon', '${astro['rashi']}', '${astro['nakshatra']}', '${planets['Moon']!.toStringAsFixed(2)}°'],
+                            ['Mars', 'Mithuna', 'Mrigashira', '${planets['Mars']!.toStringAsFixed(2)}°'],
+                            ['Mercury', 'Mithuna', 'Mrigashira', '${planets['Mercury']!.toStringAsFixed(2)}°'],
+                            ['Jupiter', 'Vrischika', 'Anuradha', '${planets['Jupiter']!.toStringAsFixed(2)}°'],
+                            ['Venus', 'Karka', 'Ashlesha', '${planets['Venus']!.toStringAsFixed(2)}°'],
+                            ['Saturn', 'Tula', 'Chitra', '${planets['Saturn']!.toStringAsFixed(2)}°'],
+                            ['Rahu', 'Mithuna', 'Mrigashira', '${planets['Rahu']!.toStringAsFixed(2)}°'],
+                            ['Ketu', 'Dhanus', 'Mula', '${planets['Ketu']!.toStringAsFixed(2)}°'],
+                          ],
+                          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 8),
+                          headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+                          cellHeight: 18,
+                          cellStyle: const pw.TextStyle(fontSize: 7.5),
+                        ),
+                        pw.Spacer(),
+                        buildFooter(),
+                      ],
+                    );
+                  },
                 ),
               );
 
@@ -2094,12 +2314,12 @@ jobs:
                       buildHeader('PLANET TO PLANET HIT MATRIX'),
                       pw.SizedBox(height: 8),
                       pw.Text('Positive Hits (Harmonious Flow):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
-                      pw.Bullet(text: '60 Degree Hit: Mars - Jupiter (55.07°)'),
-                      pw.Bullet(text: '120 Degree Hit: Jupiter - Mercury (124.15°)'),
+                      pw.Bullet(text: '60 Degree Hit: Mars - Jupiter (Harmonious Energy)'),
+                      pw.Bullet(text: '120 Degree Hit: Jupiter - Mercury (Wisdom & Commercial Flow)'),
                       pw.SizedBox(height: 10),
                       pw.Text('Negative Hits (Tension & Activation Required):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                      pw.Bullet(text: '180 Degree Hit: Mercury - Mars (180.77°)'),
-                      pw.Bullet(text: '45 Degree Hit: Moon - Sun (45.31°)'),
+                      pw.Bullet(text: '180 Degree Hit: Mercury - Mars (Opposition Rectification)'),
+                      pw.Bullet(text: '45 Degree Hit: Moon - Sun (Emotional Balance Required)'),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -2117,14 +2337,14 @@ jobs:
                       buildHeader('PLANET TO HOUSE HIT MATRIX'),
                       pw.SizedBox(height: 8),
                       pw.Text('Positive Hits (House Support):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.green800)),
-                      pw.Bullet(text: '30 Degree Hit: Sun - House 2 (30.91°) [Wealth Support]'),
-                      pw.Bullet(text: '60 Degree Hit: Sun - House 3 (61.26°) [Effort & Status]'),
-                      pw.Bullet(text: '120 Degree Hit: Sun - House 5 (124.59°) [Intellect & Creativity]'),
+                      pw.Bullet(text: 'Sun - House 2 [Wealth & Asset Foundation Support]'),
+                      pw.Bullet(text: 'Sun - House 3 [Status, Effort & Commercial Reach]'),
+                      pw.Bullet(text: 'Sun - House 5 [Intellect, Intuition & Manifestation]'),
                       pw.SizedBox(height: 10),
                       pw.Text('Negative Hits (House Obstacles):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                      pw.Bullet(text: '90 Degree Hit: Sun - House 4 (92.99°) [Domestic Peace Conflict]'),
-                      pw.Bullet(text: '180 Degree Hit: Sun - House 7 (183.52°) [Partnership Strain]'),
-                      pw.Bullet(text: '180 Degree Hit: Mars - House 2 (184.98°) [Expenditure Spurt]'),
+                      pw.Bullet(text: 'Sun - House 4 [Domestic Peace & Mental Ease]'),
+                      pw.Bullet(text: 'Sun - House 7 [Partnership & Public Association Strain]'),
+                      pw.Bullet(text: 'Mars - House 2 [Expenditure Control Required]'),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -2153,16 +2373,16 @@ jobs:
                               children: [
                                 pw.TableRow(children: [
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SE)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('9 (S)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.dob.year % 10} (S)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
                                 pw.TableRow(children: [
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('3, 3 (E)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.mulank} (E)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('X (Center)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('7 (W)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
                                 pw.TableRow(children: [
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('8 (NE)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
+                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.bhagyank} (NE)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('1 (N)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
                                   pw.Container(height: 54, child: pw.Center(child: pw.Text('6 (NW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
                                 ]),
@@ -2174,14 +2394,11 @@ jobs:
                             child: pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
-                                pw.Text('Psychic Number (Mulank): 3 (Jupiter)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                                pw.Text('Destiny Number (Bhagyank): 3 (Jupiter)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                                pw.Text('Psychic Number (Mulank): ${client.mulank}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
+                                pw.Text('Destiny Number (Bhagyank): ${client.bhagyank}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
                                 pw.SizedBox(height: 6),
-                                pw.Text('Mulank (3) Friends: 1, 2, 3, 5, 8, 9 | Enemies: 4, 7'),
-                                pw.Text('Bhagyank (3) Friends: 1, 2, 3, 5, 8, 9 | Enemies: 4, 7'),
-                                pw.Text('Common Favorable Numbers: 1, 3, 5, 9', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
+                                pw.Text('Favorable Numbers: 1, 3, 5, 9', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                                 pw.SizedBox(height: 8),
-                                pw.Text('Loshu Missing Numbers: 2, 4, 5, 6, 7'),
                                 pw.Text('Remedy: Place Brass or Earth elements in SW and Center to balance grid stability.'),
                               ],
                             ),
