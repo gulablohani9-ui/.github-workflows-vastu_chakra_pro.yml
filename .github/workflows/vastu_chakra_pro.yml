@@ -104,8 +104,10 @@ jobs:
             TimeOfDay birthTime = const TimeOfDay(hour: 1, minute: 20);
             String birthPlace = "Jodhpur, Rajasthan, India";
             double northDegree = 254.0;
-            double plotWidth = 50.0;
+            double plotWidth = 30.0;
             double plotLength = 50.0;
+
+            Map<String, double> manualZonalStrength = {};
 
             String get formattedBirthTime {
               final h = birthTime.hour.toString().padLeft(2, '0');
@@ -126,7 +128,7 @@ jobs:
             File? mapImage;
             Uint8List? mapImageBytes;
             List<Offset> plotPoints = [];
-            int currentTab = 0;
+            int currentTab = 1; // Start on Map editor directly
 
             Offset? getCentroid(List<Offset> pts) {
               if (pts.length < 3) return null;
@@ -150,6 +152,7 @@ jobs:
               final screens = [
                 ClientInputScreen(client: client, onUpdate: () => setState(() {})),
                 VastuMapEditor(
+                  client: client,
                   mapImage: mapImage,
                   points: plotPoints,
                   centroid: centroid,
@@ -161,6 +164,7 @@ jobs:
                   onPointsUpdate: (pts) => setState(() => plotPoints = pts),
                   onDegreeChanged: (deg) => setState(() => client.northDegree = deg),
                 ),
+                ZonalAreaEditorScreen(client: client, onUpdate: () => setState(() {})),
                 AstroCalculationsScreen(client: client),
                 PdfReportPreviewScreen(
                   client: client,
@@ -181,8 +185,9 @@ jobs:
                   onTap: (idx) => setState(() => currentTab = idx),
                   items: const [
                     BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client / DOB'),
-                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Map & Degree'),
-                    BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro Parameters'),
+                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: 'Ruler & Map'),
+                    BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Plot & Graph'),
+                    BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'Astro-Vastu'),
                     BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Glohani PDF'),
                   ],
                 ),
@@ -212,28 +217,6 @@ jobs:
                       initialValue: client.address,
                       decoration: const InputDecoration(labelText: 'Property Address', border: OutlineInputBorder()),
                       onChanged: (v) { client.address = v; onUpdate(); },
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: client.plotWidth.toString(),
-                            decoration: const InputDecoration(labelText: 'Width (ft)', border: OutlineInputBorder()),
-                            keyboardType: TextInputType.number,
-                            onChanged: (v) { client.plotWidth = double.tryParse(v) ?? 50.0; onUpdate(); },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: client.plotLength.toString(),
-                            decoration: const InputDecoration(labelText: 'Length (ft)', border: OutlineInputBorder()),
-                            keyboardType: TextInputType.number,
-                            onChanged: (v) { client.plotLength = double.tryParse(v) ?? 50.0; onUpdate(); },
-                          ),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -284,6 +267,7 @@ jobs:
           }
 
           class VastuMapEditor extends StatefulWidget {
+            final MasterClientData client;
             final File? mapImage;
             final List<Offset> points;
             final Offset? centroid;
@@ -294,6 +278,7 @@ jobs:
 
             const VastuMapEditor({
               super.key,
+              required this.client,
               required this.mapImage,
               required this.points,
               required this.centroid,
@@ -309,12 +294,44 @@ jobs:
 
           class _VastuMapEditorState extends State<VastuMapEditor> {
             int? draggedIdx;
+            double pixelsPerFoot = 4.0;
+
+            @override
+            void initState() {
+              super.initState();
+              if (widget.points.isEmpty) {
+                // Initialize default 4 rectangular corner points on grid
+                widget.points.addAll([
+                  const Offset(50, 400),
+                  Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400),
+                  Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400 - widget.client.plotLength * pixelsPerFoot),
+                  Offset(50, 400 - widget.client.plotLength * pixelsPerFoot),
+                ]);
+              }
+            }
+
+            void recalculateDimensionsFromPoints() {
+              if (widget.points.length >= 4) {
+                double minX = widget.points.map((p) => p.dx).reduce(math.min);
+                double maxX = widget.points.map((p) => p.dx).reduce(math.max);
+                double minY = widget.points.map((p) => p.dy).reduce(math.min);
+                double maxY = widget.points.map((p) => p.dy).reduce(math.max);
+
+                double measuredW = (maxX - minX) / pixelsPerFoot;
+                double measuredL = (maxY - minY) / pixelsPerFoot;
+
+                if (measuredW > 5 && measuredL > 5) {
+                  widget.client.plotWidth = double.parse(measuredW.toStringAsFixed(1));
+                  widget.client.plotLength = double.parse(measuredL.toStringAsFixed(1));
+                }
+              }
+            }
 
             @override
             Widget build(BuildContext context) {
               return Scaffold(
                 appBar: AppBar(
-                  title: const Text('Plot Boundary & Centroid'),
+                  title: Text('Live Scale: ${widget.client.plotWidth}ft x ${widget.client.plotLength}ft'),
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.photo_library),
@@ -328,29 +345,52 @@ jobs:
                     ),
                     IconButton(
                       icon: const Icon(Icons.refresh, color: Colors.redAccent),
-                      onPressed: () => widget.onPointsUpdate([]),
+                      onPressed: () {
+                        setState(() {
+                          widget.points.clear();
+                          widget.points.addAll([
+                            const Offset(50, 400),
+                            Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400),
+                            Offset(50 + widget.client.plotWidth * pixelsPerFoot, 400 - widget.client.plotLength * pixelsPerFoot),
+                            Offset(50, 400 - widget.client.plotLength * pixelsPerFoot),
+                          ]);
+                          widget.onPointsUpdate(List.from(widget.points));
+                        });
+                      },
                     )
                   ],
                 ),
                 body: Column(
                   children: [
+                    Container(
+                      color: const Color(0xFF2A2A2A),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Width: ${widget.client.plotWidth} ft', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                          Text('Length: ${widget.client.plotLength} ft', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
+                          Text('Total: ${(widget.client.plotWidth * widget.client.plotLength).toStringAsFixed(0)} sq.ft', style: const TextStyle(color: Colors.white70)),
+                        ],
+                      ),
+                    ),
                     Expanded(
                       child: GestureDetector(
                         onPanDown: (d) {
                           for (int i = 0; i < widget.points.length; i++) {
-                            if ((widget.points[i] - d.localPosition).distance < 25) {
+                            if ((widget.points[i] - d.localPosition).distance < 28) {
                               draggedIdx = i;
                               return;
                             }
                           }
-                          List<Offset> up = List.from(widget.points)..add(d.localPosition);
-                          widget.onPointsUpdate(up);
                         },
                         onPanUpdate: (d) {
                           if (draggedIdx != null) {
-                            List<Offset> up = List.from(widget.points);
-                            up[draggedIdx!] = d.localPosition;
-                            widget.onPointsUpdate(up);
+                            setState(() {
+                              widget.points[draggedIdx!] = d.localPosition;
+                              widget.onPointsUpdate(List.from(widget.points));
+                              recalculateDimensionsFromPoints();
+                            });
                           }
                         },
                         onPanEnd: (_) => draggedIdx = null,
@@ -358,15 +398,20 @@ jobs:
                           fit: StackFit.expand,
                           children: [
                             Container(
-                              color: Colors.black,
+                              color: const Color(0xFF1E1E1E),
                               child: widget.mapImage != null
-                                  ? Image.file(widget.mapImage!, fit: BoxFit.contain)
-                                  : const Center(child: Text('Tap Gallery icon to load floor plan.\nTap plot corners to set boundary.\nDrag any point to reposition.', textAlign: TextAlign.center)),
+                                  ? InteractiveViewer(
+                                      maxScale: 4.0,
+                                      minScale: 0.5,
+                                      child: Image.file(widget.mapImage!, fit: BoxFit.contain),
+                                    )
+                                  : const Center(child: Text('Tap gallery icon to upload floor plan.\nDrag Red dots to calibrate plot corners.')),
                             ),
                             CustomPaint(
-                              painter: ReportVastuPainter(
+                              painter: RulerAndPlotPainter(
                                 points: widget.points,
                                 centroid: widget.centroid,
+                                pixelsPerFoot: pixelsPerFoot,
                                 northDegree: widget.northDegree,
                               ),
                             ),
@@ -376,10 +421,10 @@ jobs:
                     ),
                     Container(
                       color: const Color(0xFF1E1E1E),
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Row(
                         children: [
-                          const Text('North Degree: ', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
+                          const Text('North: ', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
                           Expanded(
                             child: Slider(
                               value: widget.northDegree,
@@ -392,6 +437,239 @@ jobs:
                         ],
                       ),
                     ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class RulerAndPlotPainter extends CustomPainter {
+            final List<Offset> points;
+            final Offset? centroid;
+            final double pixelsPerFoot;
+            final double northDegree;
+
+            RulerAndPlotPainter({
+              required this.points,
+              required this.centroid,
+              required this.pixelsPerFoot,
+              required this.northDegree,
+            });
+
+            @override
+            void paint(Canvas canvas, Size size) {
+              final gridPaint = Paint()..color = Colors.white12..strokeWidth = 0.8;
+              final axisPaint = Paint()..color = Colors.tealAccent..strokeWidth = 1.4;
+              final borderPaint = Paint()..color = Colors.amberAccent..strokeWidth = 2.0..style = PaintingStyle.stroke;
+              final fillPaint = Paint()..color = Colors.amber.withOpacity(0.08)..style = PaintingStyle.fill;
+              final dotPaint = Paint()..color = Colors.redAccent;
+
+              // 1. Draw Feet Ruler Lines & Numbers on X & Y Axis (GeoGebra Style)
+              double originX = 35.0;
+              double originY = size.height - 35.0;
+
+              // Y-Axis (Vertical ft)
+              canvas.drawLine(Offset(originX, 10), Offset(originX, originY), axisPaint);
+              // X-Axis (Horizontal ft)
+              canvas.drawLine(Offset(originX, originY), Offset(size.width - 10, originY), axisPaint);
+
+              for (int ft = 0; ft <= 100; ft += 10) {
+                double px = originX + ft * pixelsPerFoot;
+                if (px < size.width) {
+                  canvas.drawLine(Offset(px, 10), Offset(px, originY), gridPaint);
+                  TextPainter(
+                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.white60, fontSize: 8)),
+                    textDirection: ui.TextDirection.ltr,
+                  )..layout()..paint(canvas, Offset(px - 6, originY + 6));
+                }
+
+                double py = originY - ft * pixelsPerFoot;
+                if (py > 10) {
+                  canvas.drawLine(Offset(originX, py), Offset(size.width - 10, py), gridPaint);
+                  TextPainter(
+                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.white60, fontSize: 8)),
+                    textDirection: ui.TextDirection.ltr,
+                  )..layout()..paint(canvas, Offset(originX - 24, py - 5));
+                }
+              }
+
+              // 2. Draw Draggable Plot Shape
+              if (points.isNotEmpty) {
+                Path path = Path()..moveTo(points[0].dx, points[0].dy);
+                for (int i = 1; i < points.length; i++) {
+                  path.lineTo(points[i].dx, points[i].dy);
+                }
+                path.close();
+                canvas.drawPath(path, fillPaint);
+                canvas.drawPath(path, borderPaint);
+
+                for (int i = 0; i < points.length; i++) {
+                  canvas.drawCircle(points[i], 8, dotPaint);
+                  canvas.drawCircle(points[i], 3, Paint()..color = Colors.white);
+                }
+              }
+
+              // 3. Draw Centroid & North Angle
+              if (centroid != null) {
+                canvas.drawCircle(centroid!, 6, Paint()..color = Colors.tealAccent);
+                double rad = (northDegree - 90) * (math.pi / 180);
+                Offset arrowEnd = Offset(centroid!.dx + 60 * math.cos(rad), centroid!.dy + 60 * math.sin(rad));
+                canvas.drawLine(centroid!, arrowEnd, Paint()..color = Colors.red..strokeWidth = 2.2);
+              }
+            }
+
+            @override
+            bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+          }
+
+          class ZonalAreaEditorScreen extends StatefulWidget {
+            final MasterClientData client;
+            final VoidCallback onUpdate;
+            const ZonalAreaEditorScreen({super.key, required this.client, required this.onUpdate});
+
+            @override
+            State<ZonalAreaEditorScreen> createState() => _ZonalAreaEditorScreenState();
+          }
+
+          class _ZonalAreaEditorScreenState extends State<ZonalAreaEditorScreen> {
+            final zonesOrder = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+
+            Map<String, double> runExcelEngine() {
+              double w = widget.client.plotWidth / 2.0;
+              double l = widget.client.plotLength / 2.0;
+              double wl2 = w * l / 2.0;
+              double a = (w * w) / 2.0;
+              double b = (l * l) / 2.0;
+              double diag = math.atan(l / w) * 180.0 / math.pi;
+
+              Map<String, double> areas = {};
+              double currD = widget.client.northDegree + 11.25;
+
+              for (String z in zonesOrder) {
+                double d = currD % 360.0;
+                if (d < 0) d += 360.0;
+                double e = (d - 22.5) % 360.0;
+                if (e < 0) e += 360.0;
+
+                bool c1 = ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) ||
+                    ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0));
+
+                bool c2 = ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) ||
+                    ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag)));
+
+                bool c3 = (e <= diag && d >= diag && d < 90.0) ||
+                    (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0);
+
+                bool c4 = (e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) ||
+                    (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0);
+
+                double dRad = d * math.pi / 180.0;
+                double eRad = e * math.pi / 180.0;
+
+                double mVal = a * math.tan(dRad) - a * math.tan(eRad);
+                double nVal = b * math.tan((d - 90.0) * math.pi / 180.0) + b * math.tan((90.0 - e) * math.pi / 180.0);
+                double oVal = wl2 - a * math.tan(eRad) + wl2 - b * math.tan((90.0 - d) * math.pi / 180.0);
+                double pVal = wl2 - a * math.tan((180.0 - d) * math.pi / 180.0) + wl2 - b * math.tan((e - 90.0) * math.pi / 180.0);
+
+                double areaVal = wl2;
+                if (c1) areaVal = mVal.abs();
+                else if (c2) areaVal = nVal.abs();
+                else if (c3) areaVal = oVal.abs();
+                else if (c4) areaVal = pVal.abs();
+
+                areas[z] = widget.client.manualZonalStrength[z] ?? areaVal;
+                currD = e;
+              }
+              return areas;
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              final areas = runExcelEngine();
+              double sumArea = areas.values.reduce((a, b) => a + b);
+              double balance = sumArea / 16.0;
+              double maxVal = areas.values.reduce(math.max);
+              double minVal = areas.values.reduce(math.min);
+              double upperBal = (maxVal - balance) / 2.0 + balance;
+              double lowerBal = (balance - minVal) / 2.0 + minVal;
+
+              return Scaffold(
+                appBar: AppBar(title: const Text('Plot Size & Zonal Strength Table')),
+                body: ListView(
+                  padding: const EdgeInsets.all(12),
+                  children: [
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          children: [
+                            const Text('Calibrated Dimensions (From Screen / Edit Below)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    initialValue: widget.client.plotWidth.toString(),
+                                    decoration: const InputDecoration(labelText: 'Plot Width (ft)', border: OutlineInputBorder()),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (v) {
+                                      widget.client.plotWidth = double.tryParse(v) ?? 30.0;
+                                      widget.onUpdate();
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: TextFormField(
+                                    initialValue: widget.client.plotLength.toString(),
+                                    decoration: const InputDecoration(labelText: 'Plot Length (ft)', border: OutlineInputBorder()),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (v) {
+                                      widget.client.plotLength = double.tryParse(v) ?? 50.0;
+                                      widget.onUpdate();
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text('Balance: ${balance.toStringAsFixed(1)} sq.ft | Upper: ${upperBal.toStringAsFixed(1)} | Lower: ${lowerBal.toStringAsFixed(1)}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('16 Zones Area Breakdown (Calculated via Excel formula):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                    const SizedBox(height: 6),
+                    ...zonesOrder.map((z) {
+                      double val = areas[z]!;
+                      Color statusColor = val < lowerBal ? Colors.redAccent : (val > upperBal ? Colors.orangeAccent : Colors.greenAccent);
+                      return ListTile(
+                        dense: true,
+                        title: Text('$z Zone Area', style: TextStyle(fontWeight: FontWeight.bold, color: statusColor)),
+                        subtitle: Text('Ratio: ${(val / balance).toStringAsFixed(2)} | Status: ${val < lowerBal ? "Cut (Depleted)" : (val > upperBal ? "Extended" : "Balanced")}'),
+                        trailing: SizedBox(
+                          width: 90,
+                          child: TextFormField(
+                            key: ValueKey('$z-${widget.client.plotWidth}-${widget.client.plotLength}'),
+                            initialValue: val.toStringAsFixed(1),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+                            onChanged: (newV) {
+                              double? num = double.tryParse(newV);
+                              if (num != null) {
+                                widget.client.manualZonalStrength[z] = num;
+                                widget.onUpdate();
+                                setState(() {});
+                              }
+                            },
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ],
                 ),
               );
@@ -542,7 +820,6 @@ jobs:
               );
             }
 
-            // EXACT 33% BRAHMA - 77% DEVA/MANUSHYA - 100% PISHACHA RECTANGULAR RADIAL ENGINE
             pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
               required double degree,
@@ -559,7 +836,6 @@ jobs:
                         if (bgMap != null)
                           pw.Image(pw.MemoryImage(bgMap), width: 330, height: 330, fit: pw.BoxFit.contain),
 
-                        // Rotated Radial Concentric Grid
                         pw.Transform.rotate(
                           angle: (degree) * (math.pi / 180),
                           child: pw.Container(
@@ -576,17 +852,14 @@ jobs:
                                 canvas.setColor(PdfColors.blueGrey800);
                                 canvas.setLineWidth(1.2);
 
-                                // 1. Outer Box (100% Perimeter - Pishacha Vithi)
                                 canvas.drawRect(5, 5, w - 10, h - 10);
                                 canvas.strokePath();
 
-                                // 2. Intermediate Box (77% - Deva + Manushya Vithi)
                                 double w77 = (w - 10) * 0.77;
                                 double h77 = (h - 10) * 0.77;
                                 canvas.drawRect(cx - w77 / 2, cy - h77 / 2, w77, h77);
                                 canvas.strokePath();
 
-                                // 3. Central Brahma Box (33% - Brahma Vithi)
                                 double w33 = (w - 10) * 0.33;
                                 double h33 = (h - 10) * 0.33;
                                 canvas.setColor(PdfColors.black);
@@ -594,7 +867,6 @@ jobs:
                                 canvas.drawRect(cx - w33 / 2, cy - h33 / 2, w33, h33);
                                 canvas.strokePath();
 
-                                // Radial Projection Rays from Brahma to Boundary
                                 canvas.setColor(PdfColors.blue800);
                                 canvas.setLineWidth(0.85);
 
@@ -603,38 +875,32 @@ jobs:
                                   canvas.strokePath();
                                 }
 
-                                // Top Rays
                                 for (int i = 1; i <= 6; i++) {
                                   double px = 5 + ((w - 10) / 7) * i;
                                   double bx = (cx - w33 / 2) + (w33 / 7) * i;
                                   drawRadial(bx, cy - h33 / 2, px, 5);
                                 }
-                                // Bottom Rays
                                 for (int i = 1; i <= 6; i++) {
                                   double px = 5 + ((w - 10) / 7) * i;
                                   double bx = (cx - w33 / 2) + (w33 / 7) * i;
                                   drawRadial(bx, cy + h33 / 2, px, h - 5);
                                 }
-                                // Left Rays
                                 for (int i = 1; i <= 10; i++) {
                                   double py = 5 + ((h - 10) / 11) * i;
                                   double by = (cy - h33 / 2) + (h33 / 11) * i;
                                   drawRadial(cx - w33 / 2, by, 5, py);
                                 }
-                                // Right Rays
                                 for (int i = 1; i <= 10; i++) {
                                   double py = 5 + ((h - 10) / 11) * i;
                                   double by = (cy - h33 / 2) + (h33 / 11) * i;
                                   drawRadial(cx + w33 / 2, by, w - 5, py);
                                 }
 
-                                // 4 Corners to Center Rays
                                 drawRadial(cx - w33 / 2, cy - h33 / 2, 5, 5);
                                 drawRadial(cx + w33 / 2, cy - h33 / 2, w - 5, 5);
                                 drawRadial(cx - w33 / 2, cy + h33 / 2, 5, h - 5);
                                 drawRadial(cx + w33 / 2, cy + h33 / 2, w - 5, h - 5);
 
-                                // Node Red Dots on Perimeter (using drawEllipse)
                                 canvas.setColor(PdfColors.red);
                                 for (int i = 0; i <= 7; i++) {
                                   canvas.drawEllipse(5 + ((w - 10) / 7) * i, 5, 2.5, 2.5);
@@ -653,7 +919,6 @@ jobs:
                           ),
                         ),
 
-                        // Center Centroid Node Coordinate
                         pw.Container(
                           width: 8,
                           height: 8,
@@ -671,7 +936,6 @@ jobs:
               );
             }
 
-            // PURE VECTOR 100% TRANSPARENT COLOR FRAME
             pw.Widget buildVectorColorPlanPlate({
               required Uint8List? bgMap,
               required double degree,
@@ -810,7 +1074,6 @@ jobs:
               );
             }
 
-            // EXACT VASTU TIPS EXCEL MATHEMATICAL GRAPH ENGINE
             Map<String, dynamic> calculateExcelZonalStrength(double width, double length, double northDeg) {
               double w = width / 2.0;
               double l = length / 2.0;
@@ -825,34 +1088,27 @@ jobs:
               double currD = northDeg + 11.25;
 
               for (String z in zonesOrder) {
+                if (client.manualZonalStrength.containsKey(z)) {
+                  areas[z] = client.manualZonalStrength[z]!;
+                  continue;
+                }
+
                 double d = currD % 360.0;
                 if (d < 0) d += 360.0;
                 double e = (d - 22.5) % 360.0;
                 if (e < 0) e += 360.0;
 
-                bool c1 = false;
-                if ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) {
-                  c1 = true;
-                } else if ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0)) {
-                  c1 = true;
-                }
+                bool c1 = ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) ||
+                    ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0));
 
-                bool c2 = false;
-                if ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) {
-                  c2 = true;
-                } else if ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag))) {
-                  c2 = true;
-                }
+                bool c2 = ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) ||
+                    ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag)));
 
-                bool c3 = false;
-                if ((e <= diag && d >= diag && d < 90.0) || (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0)) {
-                  c3 = true;
-                }
+                bool c3 = (e <= diag && d >= diag && d < 90.0) ||
+                    (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0);
 
-                bool c4 = false;
-                if ((e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) || (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0)) {
-                  c4 = true;
-                }
+                bool c4 = (e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) ||
+                    (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0);
 
                 double dRad = d * math.pi / 180.0;
                 double eRad = e * math.pi / 180.0;
@@ -872,10 +1128,10 @@ jobs:
                 currD = e;
               }
 
-              double sumArea = areas.values.reduce((val1, val2) => val1 + val2);
+              double sumArea = areas.values.reduce((v1, v2) => v1 + v2);
               double balance = sumArea / 16.0;
-              double maxVal = areas.values.reduce((val1, val2) => math.max(val1, val2));
-              double minVal = areas.values.reduce((val1, val2) => math.min(val1, val2));
+              double maxVal = areas.values.reduce(math.max);
+              double minVal = areas.values.reduce(math.min);
 
               double upperBal = (maxVal - balance) / 2.0 + balance;
               double lowerBal = (balance - minVal) / 2.0 + minVal;
@@ -932,6 +1188,7 @@ jobs:
                             children: [
                               pw.Text('CLIENT NAME: ${client.name.toUpperCase()}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12)),
                               pw.Text('ADDRESS: ${client.address}', style: const pw.TextStyle(fontSize: 10)),
+                              pw.Text('CALIBRATED PLOT SIZE: ${client.plotWidth} ft x ${client.plotLength} ft', style: const pw.TextStyle(fontSize: 10)),
                               pw.Text('PROPERTY TYPE: [ ${client.propertyType} ]', style: const pw.TextStyle(fontSize: 10)),
                               pw.Text('EVALUATION DATE: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 10)),
                               pw.Text('NORTH DEGREE TILT: ${client.northDegree.toInt()}° Toward West/East', style: const pw.TextStyle(fontSize: 10)),
@@ -1162,7 +1419,7 @@ jobs:
                 ),
               );
 
-              // 10. ZONAL STRENGTH BAR GRAPH (EXACT VASTU TIPS EXCEL MATHEMATICAL ENGINE)
+              // 10. ZONAL STRENGTH BAR GRAPH (DYNAMIC TO USER CALIBRATED DIMENSIONS)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -1174,7 +1431,7 @@ jobs:
                     final double lowerBal = data['lowerBal'];
                     final List<String> zones = data['zones'];
 
-                    double maxScale = areas.values.reduce((v1, v2) => math.max(v1, v2)) * 1.15;
+                    double maxScale = areas.values.reduce(math.max) * 1.15;
 
                     List<String> cutZones = [];
                     List<String> extendedZones = [];
@@ -1195,8 +1452,8 @@ jobs:
                         pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
-                            pw.Text('Upper Balance Line: ${(upperBal / balance).toStringAsFixed(2)} | Balance Line: 1.00 | Lower Balance Line: ${(lowerBal / balance).toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
-                            pw.Text('Formula: Vastu Tips Engine (Exact Excel)', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                            pw.Text('Calibrated: ${client.plotWidth}ft x ${client.plotLength}ft | Upper: ${(upperBal / balance).toStringAsFixed(2)} | Balance: 1.00 | Lower: ${(lowerBal / balance).toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800)),
+                            pw.Text('Vastu Tips Engine', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
                           ],
                         ),
                         pw.SizedBox(height: 15),
@@ -1233,7 +1490,7 @@ jobs:
                         pw.Text('Zonal Strength Analysis Summary (Excel Calculated):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
                         pw.Bullet(text: 'Zones Below Lower Balance Line (Cut/Depleted): ${cutZones.isEmpty ? "None" : cutZones.join(", ")}'),
                         pw.Bullet(text: 'Zones Above Upper Balance Line (Extended): ${extendedZones.isEmpty ? "None" : extendedZones.join(", ")}'),
-                        pw.Bullet(text: 'Balanced Zones: Ideal harmony aligned with North ${client.northDegree.toInt()}° orientation.'),
+                        pw.Bullet(text: 'Balanced Zones: Real-time calibrated for ${client.plotWidth}ft x ${client.plotLength}ft plot with ${client.northDegree.toInt()}° North orientation.'),
                         pw.Spacer(),
                         buildFooter(),
                       ],
@@ -1651,61 +1908,6 @@ jobs:
                 ),
               );
             }
-          }
-
-          class ReportVastuPainter extends CustomPainter {
-            final List<Offset> points;
-            final Offset? centroid;
-            final double northDegree;
-
-            ReportVastuPainter({required this.points, required this.centroid, required this.northDegree});
-
-            static const List<String> dir16 = [
-              'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-              'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
-            ];
-
-            @override
-            void paint(Canvas canvas, Size size) {
-              final dotPaint = Paint()..color = Colors.amberAccent;
-              final borderPaint = Paint()..color = Colors.tealAccent..strokeWidth = 2.0..style = PaintingStyle.stroke;
-              final centroidPaint = Paint()..color = Colors.redAccent;
-
-              if (points.isNotEmpty) {
-                Path path = Path()..moveTo(points[0].dx, points[0].dy);
-                for (int i = 0; i < points.length; i++) {
-                  canvas.drawCircle(points[i], 6, dotPaint);
-                  if (i > 0) path.lineTo(points[i].dx, points[i].dy);
-                }
-                if (points.length >= 3) {
-                  path.close();
-                  canvas.drawPath(path, borderPaint);
-                }
-              }
-
-              if (centroid != null) {
-                canvas.drawCircle(centroid!, 7, centroidPaint);
-                double radius = 170.0;
-                double step = 360.0 / 16.0;
-                double offsetRad = (northDegree - 90) * (math.pi / 180.0);
-
-                for (int i = 0; i < 16; i++) {
-                  double angle = (i * step) * (math.pi / 180.0) + offsetRad;
-                  Offset end = Offset(centroid!.dx + radius * math.cos(angle), centroid!.dy + radius * math.sin(angle));
-                  canvas.drawLine(centroid!, end, Paint()..color = Colors.amberAccent.withOpacity(0.4)..strokeWidth = 1.0);
-
-                  Offset textPos = Offset(centroid!.dx + (radius + 14) * math.cos(angle), centroid!.dy + (radius + 14) * math.sin(angle));
-                  TextPainter tp = TextPainter(
-                    text: TextSpan(text: dir16[i], style: const TextStyle(color: Colors.amberAccent, fontSize: 10, fontWeight: FontWeight.bold)),
-                    textDirection: ui.TextDirection.ltr,
-                  )..layout();
-                  tp.paint(canvas, textPos - Offset(tp.width / 2, tp.height / 2));
-                }
-              }
-            }
-
-            @override
-            bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
           }
           EOF
 
