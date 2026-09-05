@@ -121,19 +121,19 @@ jobs:
               'Ketu': 240.71,
             };
 
-            final List<double> kpHouseCusps = [
-              4.20,
-              34.15,
-              64.22,
-              94.50,
-              124.60,
-              154.30,
-              184.20,
-              214.15,
-              244.22,
-              274.50,
-              304.60,
-              334.30,
+            final List<Map<String, dynamic>> kpHouses = [
+              {'h': 'H1 (Lagna)', 'deg': 4.20, 'sign': 'Mesha'},
+              {'h': 'H2 (Dhana)', 'deg': 34.15, 'sign': 'Vrishabha'},
+              {'h': 'H3 (Sahaja)', 'deg': 64.22, 'sign': 'Mithuna'},
+              {'h': 'H4 (Sukha)', 'deg': 94.50, 'sign': 'Karka'},
+              {'h': 'H5 (Putra)', 'deg': 124.60, 'sign': 'Simha'},
+              {'h': 'H6 (Ripu)', 'deg': 154.30, 'sign': 'Kanya'},
+              {'h': 'H7 (Jaya)', 'deg': 184.20, 'sign': 'Tula'},
+              {'h': 'H8 (Mrityu)', 'deg': 214.15, 'sign': 'Vrischika'},
+              {'h': 'H9 (Bhagya)', 'deg': 244.22, 'sign': 'Dhanus'},
+              {'h': 'H10 (Karma)', 'deg': 274.50, 'sign': 'Makara'},
+              {'h': 'H11 (Labha)', 'deg': 304.60, 'sign': 'Kumbha'},
+              {'h': 'H12 (Vyaya)', 'deg': 334.30, 'sign': 'Meena'},
             ];
 
             String get formattedBirthTime {
@@ -791,7 +791,7 @@ jobs:
                   children: [
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: EdgeInsets.all(12.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -804,7 +804,7 @@ jobs:
                             const Text('• Numerology: Mulank 3 (Jupiter) | Bhagyank 3 (Jupiter)'),
                             const Divider(color: Colors.grey),
                             const Text('KP 12 Cusps Degrees:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
-                            Text(client.kpHouseCusps.asMap().entries.map((e) => 'H${e.key + 1}: ${e.value.toStringAsFixed(1)}°').join(' | '), style: const TextStyle(fontSize: 11)),
+                            Text(client.kpHouses.map((e) => '${e['h']}: ${e['deg']}°').join(' | '), style: const TextStyle(fontSize: 11)),
                             const SizedBox(height: 8),
                             const Text('Planetary Absolute Positions:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.amberAccent)),
                             Text(client.kpPlanets.entries.map((e) => '${e.key}: ${e.value.toStringAsFixed(1)}°').join(' | '), style: const TextStyle(fontSize: 11)),
@@ -928,62 +928,8 @@ jobs:
               );
             }
 
-            // FULL SIZED ASTRO-KP MAHACHAKRA OVERLAY ON FLOOR PLAN (PAGE 17)
-            pw.Widget buildFullAstroKpChakraPlate({
-              required Uint8List? bgMap,
-              required Uint8List? kpChakraBytes,
-              required double degree,
-            }) {
-              return pw.Container(
-                width: 380,
-                height: 380,
-                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.2)),
-                child: pw.Stack(
-                  alignment: pw.Alignment.center,
-                  children: [
-                    if (bgMap != null)
-                      pw.Image(pw.MemoryImage(bgMap), width: 350, height: 350, fit: pw.BoxFit.contain),
-
-                    if (kpChakraBytes != null)
-                      pw.Transform.rotate(
-                        angle: (degree) * (math.pi / 180),
-                        child: pw.Image(pw.MemoryImage(kpChakraBytes), width: 375, height: 375, fit: pw.BoxFit.contain),
-                      ),
-
-                    pw.Transform.rotate(
-                      angle: (degree - 90) * (math.pi / 180),
-                      child: pw.CustomPaint(
-                        size: const PdfPoint(260, 260),
-                        painter: (PdfGraphics canvas, PdfPoint size) {
-                          canvas.setColor(PdfColors.red900);
-                          canvas.setLineWidth(2.2);
-                          canvas.drawLine(130, 130, 250, 130);
-                          canvas.strokePath();
-                          canvas.drawLine(250, 130, 235, 122);
-                          canvas.strokePath();
-                          canvas.drawLine(250, 130, 235, 138);
-                          canvas.strokePath();
-                        },
-                      ),
-                    ),
-
-                    pw.Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.tealAccent),
-                    ),
-                    pw.Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.yellowAccent),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            // DEDICATED KP 12 HOUSES (CUSPS) & 9 PLANETS DEGREE MAP (PAGE 18)
-            pw.Widget buildKpHousesAndPlanetsDegreePlate({
+            // CLEAN DEDICATED KP 12 HOUSES (CUSPS) MAP (PAGE 17)
+            pw.Widget buildKpHousesOnlyPlate({
               required Uint8List? bgMap,
               required double degree,
             }) {
@@ -995,9 +941,9 @@ jobs:
                   alignment: pw.Alignment.center,
                   children: [
                     if (bgMap != null)
-                      pw.Image(pw.MemoryImage(bgMap), width: 350, height: 350, fit: pw.BoxFit.contain),
+                      pw.Image(pw.MemoryImage(bgMap), width: 340, height: 340, fit: pw.BoxFit.contain),
 
-                    // Rotated Cusps and Planet Vectors
+                    // Rotated KP 12 Cusps Vector Overlay
                     pw.Transform.rotate(
                       angle: (degree) * (math.pi / 180),
                       child: pw.Container(
@@ -1012,30 +958,95 @@ jobs:
                                 double cx = 180.0;
                                 double cy = 180.0;
 
-                                // Outer Boundary Circular Track
-                                canvas.setColor(PdfColors.grey400);
-                                canvas.setLineWidth(1.0);
-                                canvas.drawEllipse(cx, cy, 175, 175);
+                                canvas.setColor(PdfColors.indigo900);
+                                canvas.setLineWidth(1.6);
+                                canvas.drawEllipse(cx, cy, 172, 172);
                                 canvas.strokePath();
 
-                                // 1. Draw 12 KP Cusps (Radial Blue Lines with House Markers)
-                                canvas.setColor(PdfColors.indigo800);
-                                canvas.setLineWidth(1.4);
-                                for (int i = 0; i < client.kpHouseCusps.length; i++) {
-                                  double rad = (client.kpHouseCusps[i] - 90) * (math.pi / 180.0);
-                                  double x2 = cx + 175 * math.cos(rad);
-                                  double y2 = cy + 175 * math.sin(rad);
+                                for (var h in client.kpHouses) {
+                                  double degVal = h['deg'] as double;
+                                  double rad = (degVal - 90) * (math.pi / 180.0);
+                                  double x2 = cx + 172 * math.cos(rad);
+                                  double y2 = cy + 172 * math.sin(rad);
                                   canvas.drawLine(cx, cy, x2, y2);
                                   canvas.strokePath();
                                 }
+                              },
+                            ),
 
-                                // 2. Draw 9 Planet Vectors (Orange/Red Lines with Planet Markers)
+                            // House Names with Box Tagged on lines
+                            ...client.kpHouses.map((h) {
+                              double degVal = h['deg'] as double;
+                              double rad = (degVal - 90) * (math.pi / 180.0);
+                              double posX = 180 + 145 * math.cos(rad);
+                              double posY = 180 + 145 * math.sin(rad);
+                              return pw.Positioned(
+                                left: posX - 22,
+                                top: posY - 8,
+                                child: pw.Container(
+                                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.5),
+                                  decoration: pw.BoxDecoration(
+                                    color: PdfColors.white,
+                                    border: pw.Border.all(color: PdfColors.indigo900, width: 0.8),
+                                  ),
+                                  child: pw.Text('${h['h']}\n${degVal.toStringAsFixed(1)}°', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 6, fontWeight: pw.FontWeight.bold, color: PdfColors.indigo900)),
+                                ),
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    pw.Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.indigo900),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // CLEAN DEDICATED 9 PLANETS (GRAHAS) DEGREE MAP (PAGE 18)
+            pw.Widget buildKpPlanetsOnlyPlate({
+              required Uint8List? bgMap,
+              required double degree,
+            }) {
+              return pw.Container(
+                width: 380,
+                height: 380,
+                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400, width: 1.2)),
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    if (bgMap != null)
+                      pw.Image(pw.MemoryImage(bgMap), width: 340, height: 340, fit: pw.BoxFit.contain),
+
+                    // Rotated Planets Vector Overlay
+                    pw.Transform.rotate(
+                      angle: (degree) * (math.pi / 180),
+                      child: pw.Container(
+                        width: 360,
+                        height: 360,
+                        child: pw.Stack(
+                          alignment: pw.Alignment.center,
+                          children: [
+                            pw.CustomPaint(
+                              size: const PdfPoint(360, 360),
+                              painter: (PdfGraphics canvas, PdfPoint size) {
+                                double cx = 180.0;
+                                double cy = 180.0;
+
                                 canvas.setColor(PdfColors.deepOrange900);
-                                canvas.setLineWidth(1.8);
+                                canvas.setLineWidth(1.6);
+                                canvas.drawEllipse(cx, cy, 172, 172);
+                                canvas.strokePath();
+
                                 client.kpPlanets.forEach((pName, pDeg) {
                                   double rad = (pDeg - 90) * (math.pi / 180.0);
-                                  double x2 = cx + 175 * math.cos(rad);
-                                  double y2 = cy + 175 * math.sin(rad);
+                                  double x2 = cx + 172 * math.cos(rad);
+                                  double y2 = cy + 172 * math.sin(rad);
                                   canvas.drawLine(cx, cy, x2, y2);
                                   canvas.strokePath();
 
@@ -1045,34 +1056,21 @@ jobs:
                               },
                             ),
 
-                            // House Cusp Labels (H1 to H12)
-                            ...List.generate(client.kpHouseCusps.length, (i) {
-                              double rad = (client.kpHouseCusps[i] - 90) * (math.pi / 180.0);
-                              double posX = 180 + 155 * math.cos(rad);
-                              double posY = 180 + 155 * math.sin(rad);
-                              return pw.Positioned(
-                                left: posX - 12,
-                                top: posY - 6,
-                                child: pw.Container(
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                                  child: pw.Text('H${i + 1}', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.indigo900)),
-                                ),
-                              );
-                            }),
-
-                            // Planet Labels
+                            // Planet Names & Degrees Tagged Along the Lines
                             ...client.kpPlanets.entries.map((entry) {
                               double rad = (entry.value - 90) * (math.pi / 180.0);
-                              double posX = 180 + 120 * math.cos(rad);
-                              double posY = 180 + 120 * math.sin(rad);
+                              double posX = 180 + 130 * math.cos(rad);
+                              double posY = 180 + 130 * math.sin(rad);
                               return pw.Positioned(
-                                left: posX - 16,
-                                top: posY - 6,
+                                left: posX - 24,
+                                top: posY - 8,
                                 child: pw.Container(
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-                                  decoration: const pw.BoxDecoration(color: PdfColors.yellow100),
-                                  child: pw.Text('${entry.key}\n${entry.value.toStringAsFixed(1)}°', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 5.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+                                  decoration: pw.BoxDecoration(
+                                    color: PdfColors.yellow100,
+                                    border: pw.Border.all(color: PdfColors.deepOrange900, width: 0.8),
+                                  ),
+                                  child: pw.Text('${entry.key}\n${entry.value.toStringAsFixed(1)}°', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: PdfColors.deepOrange900)),
                                 ),
                               );
                             }).toList(),
@@ -1081,11 +1079,10 @@ jobs:
                       ),
                     ),
 
-                    // Brahmasthan Center Node
                     pw.Container(
-                      width: 12,
-                      height: 12,
-                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.tealAccent),
+                      width: 10,
+                      height: 10,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.redAccent),
                     ),
                   ],
                 ),
@@ -1422,7 +1419,6 @@ jobs:
 
               final zonesChakra = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final padasChakra = await _loadAssetBytes('assets/images/vastu_32_padas.png');
-              final kpChakra = await _loadAssetBytes('assets/images/astro_kp_chakra.png');
 
               // 1. COVER PAGE
               pdf.addPage(
@@ -1533,11 +1529,10 @@ jobs:
                         '13. Indoor Plants Vastu Corrections for the Flat',
                         '14. Electronic Gadgets Positions as per Vastu',
                         '15. General Vastu Energy Rectification Guidelines',
-                        '16. Astro-Vastu Full Map Overlay Layout',
-                        '17. Astro-KP Mahachakra Floor Plan Alignment',
-                        '18. KP 12 Cusps & 9 Planets Degrees Floor Plan',
+                        '16. KP 12 Houses Cusps Spatial Floor Plan',
+                        '17. 9 Planetary Vectors & Spatial Hit Energy Map',
                       ].map((item) => pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(vertical: 3.0),
+                        padding: const pw.EdgeInsets.symmetric(vertical: 3.2),
                         child: pw.Text(item, style: const pw.TextStyle(fontSize: 9.5)),
                       )),
                       pw.Spacer(),
@@ -1877,21 +1872,24 @@ jobs:
                 ),
               );
 
-              // 17. LARGE ASTRO-KP MAHACHAKRA OVERLAY MAP (NEW PAGE 17)
+              // 17. KP 12 HOUSES (CUSPS) SPATIAL FLOOR PLAN (WITH LABELS & NAMES)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('ASTRO-KP MAHACHAKRA INTEGRATED FLOOR MAP'),
-                      pw.Text('Full-scale 360° Krishnamurti Paddhati Wheel aligned to ${client.northDegree.toInt()}° North orientation.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                      buildHeader('KP 12 HOUSES (BHAVAS) SPATIAL FLOOR PLAN'),
+                      pw.Text('Exact KP 12 Cusps radial lines with House Names superimposed on floor plan.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildFullAstroKpChakraPlate(bgMap: mapImageBytes, kpChakraBytes: kpChakra, degree: client.northDegree)),
+                      pw.Center(child: buildKpHousesOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree)),
                       pw.SizedBox(height: 6),
-                      pw.Text('Chakra Alignment Analysis:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                      pw.Bullet(text: 'Accurate mapping of 12 Signs (Rashis), 27 Nakshatras & Sub-lords over plot geometry.'),
-                      pw.Bullet(text: 'Centroid locked at Brahmasthan with exact degree alignment for spatial energy audit.'),
+                      pw.Text('12 Bhavas Spatial Allocation Table:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                      pw.Wrap(
+                        spacing: 8,
+                        runSpacing: 2,
+                        children: client.kpHouses.map((h) => pw.Text('${h['h']} (${h['sign']}): ${h['deg']}°', style: const pw.TextStyle(fontSize: 6.8))).toList(),
+                      ),
                       pw.Spacer(),
                       buildFooter(),
                     ],
@@ -1899,20 +1897,25 @@ jobs:
                 ),
               );
 
-              // 18. KP 12 HOUSES (CUSPS) & 9 PLANETS DEGREE MAP (NEW PAGE 18)
+              // 18. 9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP (WITH LABELS & NAMES)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) => pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      buildHeader('KP 12 HOUSES (CUSPS) & 9 PLANETS DEGREE MAP'),
-                      pw.Text('Exact KP House Cusps (H1 to H12) & Planetary Degree Vectors superimposed on plot.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
+                      buildHeader('9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP'),
+                      pw.Text('Exact Planetary positions with names & degrees marked along radial vectors on floor plan.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                       pw.SizedBox(height: 6),
-                      pw.Center(child: buildKpHousesAndPlanetsDegreePlate(bgMap: mapImageBytes, degree: client.northDegree)),
+                      pw.Center(child: buildKpPlanetsOnlyPlate(bgMap: mapImageBytes, degree: client.northDegree)),
                       pw.SizedBox(height: 6),
-                      pw.Text('House Cusps & Planetary Degree Details:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                      pw.Text('• KP 12 Cusps (Blue Lines): H1(04.2° Mesha), H2(34.2°), H3(64.2°), H4(94.5°), H5(124.6°), H6(154.3°), H7(184.2°), H8(214.2°), H9(244.2°), H10(274.5°), H11(304.6°), H12(334.3°)\n• 9 Grahas (Red Vectors): Sun (73.9°), Moon (302.9°), Mars (66.7°), Mercury (62.3°), Jupiter (218.7°), Venus (118.5°), Saturn (184.1°), Rahu (60.7°), Ketu (240.7°)\n• Astrological Spatial Hit: Identifies exact rooms governed by activated Dasha Lords and Cusp energies.', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
+                      pw.Text('9 Graha Degrees & Impact Points:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                      pw.Wrap(
+                        spacing: 10,
+                        runSpacing: 2,
+                        children: client.kpPlanets.entries.map((e) => pw.Text('• ${e.key}: ${e.value.toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 7.2))).toList(),
+                      ),
+                      pw.Text('Remedy Focus: Rooms traversed by active Dasha lord vectors (Saturn in Tula @ 184.1°) require metallic balancing.', style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey800)),
                       pw.Spacer(),
                       buildFooter(),
                     ],
