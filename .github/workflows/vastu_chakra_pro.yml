@@ -295,7 +295,8 @@ jobs:
           class _VastuMapEditorState extends State<VastuMapEditor> {
             int? draggedIdx;
             double pixelsPerFoot = 4.0;
-            bool isDotMode = false; // Mode toggle: Zoom Map vs Draw Dots
+            bool isDotMode = false; // False = Move/Zoom Photo, True = Drag/Add Dots
+            final TransformationController _transController = TransformationController();
 
             void recalculateDimensionsFromPoints() {
               if (widget.points.length >= 3) {
@@ -333,7 +334,7 @@ jobs:
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                      tooltip: 'Clear Dots',
+                      tooltip: 'Clear All Dots',
                       onPressed: () {
                         setState(() {
                           widget.points.clear();
@@ -354,11 +355,11 @@ jobs:
                           Expanded(
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: !isDotMode ? Colors.teal : Colors.grey[800],
-                                foregroundColor: Colors.white,
+                                backgroundColor: !isDotMode ? Colors.tealAccent : Colors.grey[800],
+                                foregroundColor: !isDotMode ? Colors.black : Colors.white70,
                               ),
-                              icon: const Icon(Icons.pinch, size: 16),
-                              label: const Text('1. Zoom/Fit Map', style: TextStyle(fontSize: 12)),
+                              icon: const Icon(Icons.pan_tool, size: 16),
+                              label: const Text('1. Move & Resize Photo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () => setState(() => isDotMode = false),
                             ),
                           ),
@@ -366,11 +367,11 @@ jobs:
                           Expanded(
                             child: ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isDotMode ? Colors.amber[800] : Colors.grey[800],
-                                foregroundColor: Colors.white,
+                                backgroundColor: isDotMode ? Colors.amberAccent : Colors.grey[800],
+                                foregroundColor: isDotMode ? Colors.black : Colors.white70,
                               ),
-                              icon: const Icon(Icons.touch_app, size: 16),
-                              label: const Text('2. Move/Add Dots', style: TextStyle(fontSize: 12)),
+                              icon: const Icon(Icons.control_point, size: 16),
+                              label: const Text('2. Lock Photo & Set Dots', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () => setState(() => isDotMode = true),
                             ),
                           ),
@@ -381,34 +382,42 @@ jobs:
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Base: Zoomable & Pannable Floor Plan
+                          // 1. Zoomable, Free-moving, Pannable Floor Plan Layer
                           Container(
-                            color: const Color(0xFF181818),
+                            color: const Color(0xFF141414),
                             child: widget.mapImage != null
                                 ? InteractiveViewer(
-                                    maxScale: 6.0,
-                                    minScale: 0.2,
+                                    transformationController: _transController,
+                                    boundaryMargin: const EdgeInsets.all(double.infinity),
+                                    maxScale: 10.0,
+                                    minScale: 0.05,
                                     panEnabled: !isDotMode,
                                     scaleEnabled: !isDotMode,
                                     child: Center(
                                       child: Image.file(widget.mapImage!, fit: BoxFit.contain),
                                     ),
                                   )
-                                : const Center(child: Text('Tap Gallery icon to load map.\nUse Mode 1 to Resize/Fit.\nUse Mode 2 to place corner dots.')),
+                                : const Center(child: Text('Tap gallery icon to load map.\nUse Mode 1 to Move/Resize.\nUse Mode 2 to place corner dots.')),
                           ),
 
-                          // Overlay Layer for Dots & Grid
+                          // 2. Fixed Feet Ruler / Axis (Always On Top of Image)
                           IgnorePointer(
-                            ignoring: !isDotMode,
-                            child: GestureDetector(
+                            child: CustomPaint(
+                              painter: RulerGridPainter(pixelsPerFoot: pixelsPerFoot),
+                            ),
+                          ),
+
+                          // 3. Dots & Polygon Layer (Active only in Mode 2)
+                          if (isDotMode)
+                            GestureDetector(
                               onPanDown: (d) {
                                 for (int i = 0; i < widget.points.length; i++) {
-                                  if ((widget.points[i] - d.localPosition).distance < 28) {
+                                  if ((widget.points[i] - d.localPosition).distance < 30) {
                                     draggedIdx = i;
                                     return;
                                   }
                                 }
-                                // Tap to add irregular corner dot
+                                // Tap to add dot on corner
                                 setState(() {
                                   widget.points.add(d.localPosition);
                                   widget.onPointsUpdate(List.from(widget.points));
@@ -426,15 +435,24 @@ jobs:
                               },
                               onPanEnd: (_) => draggedIdx = null,
                               child: CustomPaint(
-                                painter: RulerAndPlotPainter(
+                                painter: InteractivePlotPainter(
                                   points: widget.points,
                                   centroid: widget.centroid,
-                                  pixelsPerFoot: pixelsPerFoot,
+                                  northDegree: widget.northDegree,
+                                ),
+                              ),
+                            )
+                          else
+                            // Render dots passively when in Move Photo mode
+                            IgnorePointer(
+                              child: CustomPaint(
+                                painter: InteractivePlotPainter(
+                                  points: widget.points,
+                                  centroid: widget.centroid,
                                   northDegree: widget.northDegree,
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ),
@@ -462,41 +480,30 @@ jobs:
             }
           }
 
-          class RulerAndPlotPainter extends CustomPainter {
-            final List<Offset> points;
-            final Offset? centroid;
+          class RulerGridPainter extends CustomPainter {
             final double pixelsPerFoot;
-            final double northDegree;
-
-            RulerAndPlotPainter({
-              required this.points,
-              required this.centroid,
-              required this.pixelsPerFoot,
-              required this.northDegree,
-            });
+            RulerGridPainter({required this.pixelsPerFoot});
 
             @override
             void paint(Canvas canvas, Size size) {
               final gridPaint = Paint()..color = Colors.white12..strokeWidth = 0.8;
-              final axisPaint = Paint()..color = Colors.tealAccent..strokeWidth = 1.4;
-              final borderPaint = Paint()..color = Colors.amberAccent..strokeWidth = 2.0..style = PaintingStyle.stroke;
-              final fillPaint = Paint()..color = Colors.amber.withOpacity(0.12)..style = PaintingStyle.fill;
-              final dotPaint = Paint()..color = Colors.redAccent;
+              final axisPaint = Paint()..color = Colors.tealAccent..strokeWidth = 1.6;
 
               double originX = 35.0;
               double originY = size.height - 35.0;
 
-              // Y-Axis
+              // Y-Axis Line
               canvas.drawLine(Offset(originX, 10), Offset(originX, originY), axisPaint);
-              // X-Axis
+              // X-Axis Line
               canvas.drawLine(Offset(originX, originY), Offset(size.width - 10, originY), axisPaint);
 
-              for (int ft = 0; ft <= 120; ft += 10) {
+              // Feet Markings
+              for (int ft = 0; ft <= 140; ft += 10) {
                 double px = originX + ft * pixelsPerFoot;
                 if (px < size.width) {
                   canvas.drawLine(Offset(px, 10), Offset(px, originY), gridPaint);
                   TextPainter(
-                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.white60, fontSize: 8)),
+                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.tealAccent, fontSize: 8, fontWeight: FontWeight.bold)),
                     textDirection: ui.TextDirection.ltr,
                   )..layout()..paint(canvas, Offset(px - 6, originY + 6));
                 }
@@ -505,11 +512,33 @@ jobs:
                 if (py > 10) {
                   canvas.drawLine(Offset(originX, py), Offset(size.width - 10, py), gridPaint);
                   TextPainter(
-                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.white60, fontSize: 8)),
+                    text: TextSpan(text: '$ft', style: const TextStyle(color: Colors.tealAccent, fontSize: 8, fontWeight: FontWeight.bold)),
                     textDirection: ui.TextDirection.ltr,
                   )..layout()..paint(canvas, Offset(originX - 24, py - 5));
                 }
               }
+            }
+
+            @override
+            bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+          }
+
+          class InteractivePlotPainter extends CustomPainter {
+            final List<Offset> points;
+            final Offset? centroid;
+            final double northDegree;
+
+            InteractivePlotPainter({
+              required this.points,
+              required this.centroid,
+              required this.northDegree,
+            });
+
+            @override
+            void paint(Canvas canvas, Size size) {
+              final borderPaint = Paint()..color = Colors.amberAccent..strokeWidth = 2.2..style = PaintingStyle.stroke;
+              final fillPaint = Paint()..color = Colors.amber.withOpacity(0.18)..style = PaintingStyle.fill;
+              final dotPaint = Paint()..color = Colors.redAccent;
 
               if (points.isNotEmpty) {
                 Path path = Path()..moveTo(points[0].dx, points[0].dy);
@@ -523,16 +552,16 @@ jobs:
                 }
 
                 for (int i = 0; i < points.length; i++) {
-                  canvas.drawCircle(points[i], 9, dotPaint);
-                  canvas.drawCircle(points[i], 3, Paint()..color = Colors.white);
+                  canvas.drawCircle(points[i], 10, dotPaint);
+                  canvas.drawCircle(points[i], 4, Paint()..color = Colors.white);
                 }
               }
 
               if (centroid != null) {
-                canvas.drawCircle(centroid!, 6, Paint()..color = Colors.tealAccent);
+                canvas.drawCircle(centroid!, 7, Paint()..color = Colors.tealAccent);
                 double rad = (northDegree - 90) * (math.pi / 180);
-                Offset arrowEnd = Offset(centroid!.dx + 60 * math.cos(rad), centroid!.dy + 60 * math.sin(rad));
-                canvas.drawLine(centroid!, arrowEnd, Paint()..color = Colors.red..strokeWidth = 2.2);
+                Offset arrowEnd = Offset(centroid!.dx + 65 * math.cos(rad), centroid!.dy + 65 * math.sin(rad));
+                canvas.drawLine(centroid!, arrowEnd, Paint()..color = Colors.red..strokeWidth = 2.5);
               }
             }
 
