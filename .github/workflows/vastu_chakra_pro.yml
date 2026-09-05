@@ -104,6 +104,8 @@ jobs:
             TimeOfDay birthTime = const TimeOfDay(hour: 1, minute: 20);
             String birthPlace = "Jodhpur, Rajasthan, India";
             double northDegree = 254.0;
+            double plotWidth = 50.0;
+            double plotLength = 50.0;
 
             String get formattedBirthTime {
               final h = birthTime.hour.toString().padLeft(2, '0');
@@ -210,6 +212,28 @@ jobs:
                       initialValue: client.address,
                       decoration: const InputDecoration(labelText: 'Property Address', border: OutlineInputBorder()),
                       onChanged: (v) { client.address = v; onUpdate(); },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: client.plotWidth.toString(),
+                            decoration: const InputDecoration(labelText: 'Width (ft)', border: OutlineInputBorder()),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) { client.plotWidth = double.tryParse(v) ?? 50.0; onUpdate(); },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: client.plotLength.toString(),
+                            decoration: const InputDecoration(labelText: 'Length (ft)', border: OutlineInputBorder()),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) { client.plotLength = double.tryParse(v) ?? 50.0; onUpdate(); },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -786,6 +810,85 @@ jobs:
               );
             }
 
+            // EXACT VASTU TIPS EXCEL MATHEMATICAL GRAPH ENGINE
+            Map<String, dynamic> calculateExcelZonalStrength(double width, double length, double northDeg) {
+              double w = width / 2.0;
+              double l = length / 2.0;
+              double wl2 = w * l / 2.0;
+              double a = (w * w) / 2.0;
+              double b = (l * l) / 2.0;
+              double diag = math.atan(l / w) * 180.0 / math.pi;
+
+              final zonesOrder = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+              Map<String, double> areas = {};
+
+              double currD = northDeg + 11.25;
+
+              for (String z in zonesOrder) {
+                double d = currD % 360.0;
+                if (d < 0) d += 360.0;
+                double e = (d - 22.5) % 360.0;
+                if (e < 0) e += 360.0;
+
+                bool c1 = false;
+                if ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) {
+                  c1 = true;
+                } else if ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0)) {
+                  c1 = true;
+                }
+
+                bool c2 = false;
+                if ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) {
+                  c2 = true;
+                } else if ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag))) {
+                  c2 = true;
+                }
+
+                bool c3 = false;
+                if ((e <= diag && d >= diag && d < 90.0) || (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0)) {
+                  c3 = true;
+                }
+
+                bool c4 = false;
+                if ((e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) || (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0)) {
+                  c4 = true;
+                }
+
+                double dRad = d * math.pi / 180.0;
+                double eRad = e * math.pi / 180.0;
+
+                double mVal = a * math.tan(dRad) - a * math.tan(eRad);
+                double nVal = b * math.tan((d - 90.0) * math.pi / 180.0) + b * math.tan((90.0 - e) * math.pi / 180.0);
+                double oVal = wl2 - a * math.tan(eRad) + wl2 - b * math.tan((90.0 - d) * math.pi / 180.0);
+                double pVal = wl2 - a * math.tan((180.0 - d) * math.pi / 180.0) + wl2 - b * math.tan((e - 90.0) * math.pi / 180.0);
+
+                double areaVal = wl2;
+                if (c1) areaVal = mVal.abs();
+                else if (c2) areaVal = nVal.abs();
+                else if (c3) areaVal = oVal.abs();
+                else if (c4) areaVal = pVal.abs();
+
+                areas[z] = areaVal;
+                currD = e;
+              }
+
+              double sumArea = areas.values.reduce((val1, val2) => val1 + val2);
+              double balance = sumArea / 16.0;
+              double maxVal = areas.values.reduce((val1, val2) => math.max(val1, val2));
+              double minVal = areas.values.reduce((val1, val2) => math.min(val1, val2));
+
+              double upperBal = (maxVal - balance) / 2.0 + balance;
+              double lowerBal = (balance - minVal) / 2.0 + minVal;
+
+              return {
+                'areas': areas,
+                'balance': balance,
+                'upperBal': upperBal,
+                'lowerBal': lowerBal,
+                'zones': zonesOrder,
+              };
+            }
+
             Future<Uint8List> generateFullReport(PdfPageFormat format) async {
               final pdf = pw.Document();
 
@@ -1059,19 +1162,43 @@ jobs:
                 ),
               );
 
-              // 10. ZONAL STRENGTH BAR GRAPH
+              // 10. ZONAL STRENGTH BAR GRAPH (EXACT VASTU TIPS EXCEL MATHEMATICAL ENGINE)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) {
-                    final zones = ['E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N', 'NNE', 'NE', 'ENE'];
-                    final strengths = [0.46, 0.29, 0.35, 1.10, 1.64, 1.58, 1.60, 0.90, 0.50, 0.53, 0.95, 1.05, 1.20, 1.15, 1.42, 1.68];
+                    final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree);
+                    final Map<String, double> areas = data['areas'];
+                    final double balance = data['balance'];
+                    final double upperBal = data['upperBal'];
+                    final double lowerBal = data['lowerBal'];
+                    final List<String> zones = data['zones'];
+
+                    double maxScale = areas.values.reduce((v1, v2) => math.max(v1, v2)) * 1.15;
+
+                    List<String> cutZones = [];
+                    List<String> extendedZones = [];
+
+                    for (String z in zones) {
+                      double val = areas[z]!;
+                      if (val < lowerBal) {
+                        cutZones.add('$z (${(val / balance).toStringAsFixed(2)})');
+                      } else if (val > upperBal) {
+                        extendedZones.add('$z (${(val / balance).toStringAsFixed(2)})');
+                      }
+                    }
 
                     return pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         buildHeader('GLOHANI VASTU ZONAL STRENGTH GRAPH'),
-                        pw.Text('Upper Balance Line: 1.34 | Balance Line: 1.00 | Lower Balance Line: 0.65', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Upper Balance Line: ${(upperBal / balance).toStringAsFixed(2)} | Balance Line: 1.00 | Lower Balance Line: ${(lowerBal / balance).toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
+                            pw.Text('Formula: Vastu Tips Engine (Exact Excel)', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                          ],
+                        ),
                         pw.SizedBox(height: 15),
                         pw.Container(
                           height: 230,
@@ -1080,17 +1207,22 @@ jobs:
                           child: pw.Row(
                             crossAxisAlignment: pw.CrossAxisAlignment.end,
                             children: List.generate(16, (i) {
-                              double val = strengths[i];
-                              PdfColor barColor = val < 0.65 ? PdfColors.red : (val > 1.34 ? PdfColors.orange : PdfColors.green);
+                              String z = zones[i];
+                              double rawArea = areas[z]!;
+                              double ratio = rawArea / balance;
+                              PdfColor barColor = rawArea < lowerBal ? PdfColors.red : (rawArea > upperBal ? PdfColors.orange : PdfColors.green);
+
+                              double barHeight = (rawArea / maxScale) * 160.0;
+
                               return pw.Expanded(
                                 child: pw.Column(
                                   mainAxisAlignment: pw.MainAxisAlignment.end,
                                   children: [
-                                    pw.Text(val.toStringAsFixed(2), style: pw.TextStyle(fontSize: 7, color: barColor, fontWeight: pw.FontWeight.bold)),
+                                    pw.Text(ratio.toStringAsFixed(2), style: pw.TextStyle(fontSize: 6.5, color: barColor, fontWeight: pw.FontWeight.bold)),
                                     pw.SizedBox(height: 2),
-                                    pw.Container(height: val * 100, margin: const pw.EdgeInsets.symmetric(horizontal: 2), color: barColor),
+                                    pw.Container(height: barHeight, margin: const pw.EdgeInsets.symmetric(horizontal: 2), color: barColor),
                                     pw.SizedBox(height: 4),
-                                    pw.Text(zones[i], style: const pw.TextStyle(fontSize: 7.5)),
+                                    pw.Text(z, style: const pw.TextStyle(fontSize: 7.5)),
                                   ],
                                 ),
                               );
@@ -1098,9 +1230,10 @@ jobs:
                           ),
                         ),
                         pw.SizedBox(height: 12),
-                        pw.Text('Zonal Strength Analysis Summary:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
-                        pw.Bullet(text: 'Zones Below Lower Balance Line (Cut/Depleted): E (0.46), ESE (0.29), SE (0.35), W (0.50), WNW (0.53)'),
-                        pw.Bullet(text: 'Zones Above Upper Balance Line (Extended): S (1.64), SSW (1.58), SW (1.60), NE (1.42), ENE (1.68)'),
+                        pw.Text('Zonal Strength Analysis Summary (Excel Calculated):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                        pw.Bullet(text: 'Zones Below Lower Balance Line (Cut/Depleted): ${cutZones.isEmpty ? "None" : cutZones.join(", ")}'),
+                        pw.Bullet(text: 'Zones Above Upper Balance Line (Extended): ${extendedZones.isEmpty ? "None" : extendedZones.join(", ")}'),
+                        pw.Bullet(text: 'Balanced Zones: Ideal harmony aligned with North ${client.northDegree.toInt()}° orientation.'),
                         pw.Spacer(),
                         buildFooter(),
                       ],
