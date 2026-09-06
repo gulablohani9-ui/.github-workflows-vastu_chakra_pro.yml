@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Glohani Vastu Exact 37-Page Suite
+      - name: Generate Glohani Vastu Complete 37-Page Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.glohani.vastureport --project-name=glohani_vastu_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: glohani_vastu_pro
-          description: Glohani Vastu Exact 37-Page Professional Evaluation Suite
+          description: Glohani Vastu Complete Dynamic 37-Page Evaluation Suite
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -62,6 +62,7 @@ jobs:
           import 'dart:io';
           import 'dart:math' as math;
           import 'dart:typed_data';
+          import 'dart:ui' as ui;
           import 'package:flutter/material.dart';
           import 'package:flutter/services.dart' show rootBundle;
           import 'package:image_picker/image_picker.dart';
@@ -125,7 +126,7 @@ jobs:
               if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
                 y--;
               }
-              return y;
+              return y < 0 ? 0 : y;
             }
 
             int get mulank {
@@ -182,24 +183,24 @@ jobs:
           class MasterClientData {
             String propertyType = "FLAT";
             String regNo = "AV-F-17503";
-            String address = "Jalor, Rajasthan, India";
-            double northDegree = 15.0;
+            String address = "Jodhpur, Rajasthan, India";
+            double northDegree = 254.0;
             double plotWidth = 18.0;
             double plotLength = 20.0;
 
             final PersonProfile owner = PersonProfile(
               role: "owner",
-              name: "PXXXX XXXXXXR",
+              name: "GHANSHYAM LOHANI",
               dob: DateTime(1988, 9, 7),
               birthTime: const TimeOfDay(hour: 6, minute: 22),
-              birthPlace: "Delhi, NCT, India",
-              lat: 28.7041,
-              lng: 77.1025,
+              birthPlace: "Jodhpur, Rajasthan, India",
+              lat: 26.2389,
+              lng: 73.0243,
             );
 
             final PersonProfile wife = PersonProfile(
               role: "wife",
-              name: "CXXXXX KXXXXXX",
+              name: "RAJANI POMAL",
               dob: DateTime(1989, 4, 17),
               birthTime: const TimeOfDay(hour: 14, minute: 15),
               birthPlace: "Mumbai, Maharashtra, India",
@@ -209,7 +210,7 @@ jobs:
 
             final PersonProfile child = PersonProfile(
               role: "child",
-              name: "XXXXXMXX XXXXXXR",
+              name: "JOVIT LOHANI",
               dob: DateTime(2021, 2, 24),
               birthTime: const TimeOfDay(hour: 7, minute: 55),
               birthPlace: "Delhi, NCT, India",
@@ -302,13 +303,28 @@ jobs:
             final MasterClientData client = MasterClientData();
             File? mapImage;
             Uint8List? mapImageBytes;
+            List<Offset> plotPoints = [];
             int currentTab = 0;
 
             @override
             Widget build(BuildContext context) {
               final screens = [
                 ClientInputScreen(client: client, onUpdate: () => setState(() {})),
-                PdfReportPreviewScreen(client: client, mapImageBytes: mapImageBytes),
+                VastuMapEditorScreen(
+                  client: client,
+                  mapImage: mapImage,
+                  points: plotPoints,
+                  onPickImage: (f, b) => setState(() {
+                    mapImage = f;
+                    mapImageBytes = b;
+                  }),
+                  onPointsUpdate: (pts) => setState(() => plotPoints = pts),
+                  onDegreeChanged: (deg) => setState(() => client.northDegree = deg),
+                ),
+                PdfReportPreviewScreen(
+                  client: client,
+                  mapImageBytes: mapImageBytes,
+                ),
               ];
 
               return Scaffold(
@@ -321,8 +337,9 @@ jobs:
                   type: BottomNavigationBarType.fixed,
                   onTap: (idx) => setState(() => currentTab = idx),
                   items: const [
-                    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Client Profile'),
-                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Exact 37-Page PDF'),
+                    BottomNavigationBarItem(icon: Icon(Icons.person), label: '1. Astro & DOB'),
+                    BottomNavigationBarItem(icon: Icon(Icons.architecture), label: '2. Upload Map'),
+                    BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: '3. Glohani PDF'),
                   ],
                 ),
               );
@@ -339,58 +356,286 @@ jobs:
           }
 
           class _ClientInputScreenState extends State<ClientInputScreen> {
+            Widget buildPersonEditor(String title, PersonProfile p) {
+              return Card(
+                color: const Color(0xFF1E1E1E),
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Colors.tealAccent, width: 0.8)),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        initialValue: p.name,
+                        decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder(), isDense: true),
+                        onChanged: (v) { p.name = v; widget.onUpdate(); },
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text('DOB: ${DateFormat("dd-MM-yyyy").format(p.dob)}', style: const TextStyle(fontSize: 12)),
+                              trailing: const Icon(Icons.calendar_today, size: 18, color: Colors.tealAccent),
+                              onTap: () async {
+                                final d = await showDatePicker(
+                                  context: context,
+                                  initialDate: p.dob,
+                                  firstDate: DateTime(1940),
+                                  lastDate: DateTime(2035),
+                                );
+                                if (d != null) {
+                                  setState(() => p.dob = d);
+                                  widget.onUpdate();
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text('Time: ${p.formattedBirthTime}', style: const TextStyle(fontSize: 12)),
+                              trailing: const Icon(Icons.access_time, size: 18, color: Colors.tealAccent),
+                              onTap: () async {
+                                final t = await showTimePicker(context: context, initialTime: p.birthTime);
+                                if (t != null) {
+                                  setState(() => p.birthTime = t);
+                                  widget.onUpdate();
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      TextFormField(
+                        initialValue: p.birthPlace,
+                        decoration: const InputDecoration(labelText: 'Birth Place (City, State)', border: OutlineInputBorder(), isDense: true),
+                        onChanged: (v) { p.birthPlace = v; widget.onUpdate(); },
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Mulank: ${p.mulank} | Bhagyank: ${p.bhagyank} | Name No: ${p.nameNumber} | Age: ${p.ageYears}Y',
+                          style: const TextStyle(fontSize: 11, color: Colors.amberAccent)),
+                    ],
+                  ),
+                ),
+              );
+            }
+
             @override
             Widget build(BuildContext context) {
               return Scaffold(
-                appBar: AppBar(title: const Text('Glohani Vastu Exact 37-Page Profile'), centerTitle: true),
+                appBar: AppBar(title: const Text('Client & Astro Profile Inputs'), centerTitle: true),
                 body: ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(14),
                   children: [
-                    TextFormField(
-                      initialValue: widget.client.owner.name,
-                      decoration: const InputDecoration(labelText: 'Owner Name', border: OutlineInputBorder()),
-                      onChanged: (v) { widget.client.owner.name = v; widget.onUpdate(); },
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      initialValue: widget.client.wife.name,
-                      decoration: const InputDecoration(labelText: 'Wife Name', border: OutlineInputBorder()),
-                      onChanged: (v) { widget.client.wife.name = v; widget.onUpdate(); },
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      initialValue: widget.client.child.name,
-                      decoration: const InputDecoration(labelText: 'Child Name', border: OutlineInputBorder()),
-                      onChanged: (v) { widget.client.child.name = v; widget.onUpdate(); },
-                    ),
-                    const SizedBox(height: 10),
                     TextFormField(
                       initialValue: widget.client.address,
                       decoration: const InputDecoration(labelText: 'Property Address', border: OutlineInputBorder()),
                       onChanged: (v) { widget.client.address = v; widget.onUpdate(); },
                     ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        const Text('North Tilt: ', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
-                        Expanded(
-                          child: Slider(
-                            value: widget.client.northDegree,
-                            min: 0,
-                            max: 360,
-                            onChanged: (v) => setState(() {
-                              widget.client.northDegree = v;
-                              widget.onUpdate();
-                            }),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: widget.client.propertyType,
+                      decoration: const InputDecoration(labelText: 'Property Type', border: OutlineInputBorder()),
+                      items: ['HOME', 'FLAT', 'OFFICE', 'LAND', 'COMMERCIAL', 'FACTORY']
+                          .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                          .toList(),
+                      onChanged: (v) { if (v != null) { widget.client.propertyType = v; widget.onUpdate(); } },
+                    ),
+                    const SizedBox(height: 8),
+                    buildPersonEditor('1. Owner (Client) Profile', widget.client.owner),
+                    buildPersonEditor('2. Spouse / Wife Profile', widget.client.wife),
+                    buildPersonEditor('3. Child Profile', widget.client.child),
+                  ],
+                ),
+              );
+            }
+          }
+
+          class VastuMapEditorScreen extends StatefulWidget {
+            final MasterClientData client;
+            final File? mapImage;
+            final List<Offset> points;
+            final Function(File, Uint8List) onPickImage;
+            final Function(List<Offset>) onPointsUpdate;
+            final Function(double) onDegreeChanged;
+
+            const VastuMapEditorScreen({
+              super.key,
+              required this.client,
+              required this.mapImage,
+              required this.points,
+              required this.onPickImage,
+              required this.onPointsUpdate,
+              required this.onDegreeChanged,
+            });
+
+            @override
+            State<VastuMapEditorScreen> createState() => _VastuMapEditorScreenState();
+          }
+
+          class _VastuMapEditorScreenState extends State<VastuMapEditorScreen> {
+            bool isDotMode = false;
+            final TransformationController _controller = TransformationController();
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('Upload & Calibrate Floor Plan'),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.add_photo_alternate, color: Colors.tealAccent),
+                      tooltip: 'Upload Floor Plan',
+                      onPressed: () async {
+                        final p = await ImagePicker().pickImage(source: ImageSource.gallery);
+                        if (p != null) {
+                          final bytes = await p.readAsBytes();
+                          widget.onPickImage(File(p.path), bytes);
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                      tooltip: 'Clear Boundary Dots',
+                      onPressed: () => widget.onPointsUpdate([]),
+                    ),
+                  ],
+                ),
+                body: Column(
+                  children: [
+                    Container(
+                      color: const Color(0xFF222222),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: !isDotMode ? Colors.tealAccent : Colors.grey[800],
+                                foregroundColor: !isDotMode ? Colors.black : Colors.white70,
+                              ),
+                              icon: const Icon(Icons.pan_tool, size: 16),
+                              label: const Text('1. Move / Scale Map', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () => setState(() => isDotMode = false),
+                            ),
                           ),
-                        ),
-                        Text('${widget.client.northDegree.toInt()}°', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: isDotMode ? Colors.amberAccent : Colors.grey[800],
+                                foregroundColor: isDotMode ? Colors.black : Colors.white70,
+                              ),
+                              icon: const Icon(Icons.adjust, size: 16),
+                              label: const Text('2. Set Plot Dots', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () => setState(() => isDotMode = true),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Container(
+                            color: const Color(0xFF141414),
+                            child: widget.mapImage != null
+                                ? InteractiveViewer(
+                                    transformationController: _controller,
+                                    panEnabled: !isDotMode,
+                                    scaleEnabled: !isDotMode,
+                                    maxScale: 15.0,
+                                    minScale: 0.1,
+                                    child: Center(child: Image.file(widget.mapImage!, fit: BoxFit.contain)),
+                                  )
+                                : Center(
+                                    child: ElevatedButton.icon(
+                                      icon: const Icon(Icons.upload_file),
+                                      label: const Text('Click Here to Upload Floor Plan / Naksha'),
+                                      onPressed: () async {
+                                        final p = await ImagePicker().pickImage(source: ImageSource.gallery);
+                                        if (p != null) {
+                                          final bytes = await p.readAsBytes();
+                                          widget.onPickImage(File(p.path), bytes);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                          ),
+                          if (isDotMode)
+                            GestureDetector(
+                              onPanDown: (d) {
+                                setState(() {
+                                  widget.points.add(d.localPosition);
+                                  widget.onPointsUpdate(List.from(widget.points));
+                                });
+                              },
+                              child: CustomPaint(painter: PlotPolygonPainter(points: widget.points)),
+                            )
+                          else
+                            CustomPaint(painter: PlotPolygonPainter(points: widget.points)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      color: const Color(0xFF1E1E1E),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Text('North Tilt: ', style: TextStyle(color: Colors.tealAccent, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: Slider(
+                              value: widget.client.northDegree,
+                              min: 0,
+                              max: 360,
+                              onChanged: widget.onDegreeChanged,
+                            ),
+                          ),
+                          Text('${widget.client.northDegree.toInt()}°', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               );
             }
+          }
+
+          class PlotPolygonPainter extends CustomPainter {
+            final List<Offset> points;
+            PlotPolygonPainter({required this.points});
+
+            @override
+            void paint(Canvas canvas, Size size) {
+              if (points.isEmpty) return;
+              final borderPaint = Paint()..color = Colors.amberAccent..strokeWidth = 2.0..style = PaintingStyle.stroke;
+              final dotPaint = Paint()..color = Colors.redAccent;
+
+              Path path = Path()..moveTo(points[0].dx, points[0].dy);
+              for (int i = 1; i < points.length; i++) {
+                path.lineTo(points[i].dx, points[i].dy);
+              }
+              if (points.length >= 3) {
+                path.close();
+                canvas.drawPath(path, Paint()..color = Colors.amber.withOpacity(0.2)..style = PaintingStyle.fill);
+                canvas.drawPath(path, borderPaint);
+              }
+
+              for (var p in points) {
+                canvas.drawCircle(p, 8, dotPaint);
+                canvas.drawCircle(p, 3, Paint()..color = Colors.white);
+              }
+            }
+
+            @override
+            bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
           }
 
           class PdfReportPreviewScreen extends StatelessWidget {
@@ -452,6 +697,37 @@ jobs:
                     ],
                   ),
                 ],
+              );
+            }
+
+            pw.Widget buildDynamicMapOverlay({
+              required Uint8List? chakraAsset,
+              required double degree,
+              double size = 330,
+            }) {
+              return pw.Container(
+                width: size,
+                height: size,
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    if (mapImageBytes != null)
+                      pw.Image(pw.MemoryImage(mapImageBytes!), width: size - 30, height: size - 30, fit: pw.BoxFit.contain),
+                    if (chakraAsset != null)
+                      pw.Opacity(
+                        opacity: mapImageBytes != null ? 0.75 : 1.0,
+                        child: pw.Transform.rotate(
+                          angle: (degree) * (math.pi / 180.0),
+                          child: pw.Image(pw.MemoryImage(chakraAsset), width: size, height: size, fit: pw.BoxFit.contain),
+                        ),
+                      ),
+                    pw.Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.red800),
+                    ),
+                  ],
+                ),
               );
             }
 
@@ -680,10 +956,7 @@ jobs:
                                 child: pw.Text('VASTU EVALUATION REPORT', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
                               ),
                               pw.Text('FOR HOME - FLAT - APARTMENTS', style: pw.TextStyle(fontSize: 11, color: PdfColors.grey700, fontWeight: pw.FontWeight.bold)),
-                              if (vastu32Padas != null)
-                                pw.Image(pw.MemoryImage(vastu32Padas), width: 220, height: 220, fit: pw.BoxFit.contain)
-                              else
-                                pw.Container(width: 180, height: 180, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
+                              buildDynamicMapOverlay(chakraAsset: vastu32Padas, degree: client.northDegree, size: 230),
                               pw.Container(
                                 padding: const pw.EdgeInsets.all(10),
                                 decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal), color: PdfColors.grey100),
@@ -787,11 +1060,7 @@ jobs:
                               pw.Text('Calculated Direction: North is tilted ${client.northDegree.toInt()}° toward the west.', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
                               pw.Text('Calculation Method: Google Earth satellite imaging and AutoCAD engineering grid.', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey700)),
                               pw.SizedBox(height: 10),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.Spacer(),
                               buildFooter(),
                             ],
@@ -803,11 +1072,7 @@ jobs:
                             children: [
                               buildHeader('PLAN WITH VASTU CHAKRA'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu32Padas != null
-                                    ? pw.Image(pw.MemoryImage(vastu32Padas), width: 340, height: 340, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 320, height: 320, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu32Padas, degree: client.northDegree, size: 340)),
                               pw.Spacer(),
                               buildFooter(),
                             ],
@@ -819,11 +1084,7 @@ jobs:
                             children: [
                               buildHeader('DISTRIBUTION OF 16 ZONES AND FIVE ELEMENTS'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 340, height: 340, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 320, height: 320, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree, size: 340)),
                               pw.Spacer(),
                               buildFooter(),
                             ],
@@ -835,11 +1096,7 @@ jobs:
                             children: [
                               buildHeader('DISTRIBUTION OF 32 DIVISION FOR ENTRANCES'),
                               pw.SizedBox(height: 4),
-                              pw.Center(
-                                child: vastu32Padas != null
-                                    ? pw.Image(pw.MemoryImage(vastu32Padas), width: 320, height: 320, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu32Padas, degree: client.northDegree, size: 320)),
                               pw.SizedBox(height: 6),
                               pw.Bullet(text: 'MAIN ENTRANCE FALLS ON SHOSHA, THIS ENTRANCE IS INAUSPICIOUS.'),
                               pw.Bullet(text: 'MAIN ENTRANCE FALLS ON PAPYASHMA, THIS ENTRANCE IS INAUSPICIOUS.'),
@@ -953,11 +1210,7 @@ jobs:
                             children: [
                               buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                               pw.SizedBox(height: 4),
-                              pw.Center(
-                                child: vastu45Devtas != null
-                                    ? pw.Image(pw.MemoryImage(vastu45Devtas), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu45Devtas, degree: client.northDegree)),
                               pw.SizedBox(height: 6),
                               pw.Text('45 Devtas Breakdown (Brahmasthan 45=Brahma):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
                               pw.Wrap(
@@ -1080,9 +1333,15 @@ jobs:
                               pw.Text('Use neutral colors in areas where no specific color is recommended. Neutral colors refer to light shades of white and off-white.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
                               pw.Center(
-                                child: recommendedColorsFrame != null
-                                    ? pw.Image(pw.MemoryImage(recommendedColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 320, height: 320, decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 2))),
+                                child: pw.Stack(
+                                  alignment: pw.Alignment.center,
+                                  children: [
+                                    if (mapImageBytes != null)
+                                      pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
+                                    if (recommendedColorsFrame != null)
+                                      pw.Image(pw.MemoryImage(recommendedColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
+                                  ],
+                                ),
                               ),
                               pw.Spacer(),
                               buildFooter(),
@@ -1097,9 +1356,15 @@ jobs:
                               pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion and negative vibrations.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
                               pw.Center(
-                                child: avoidColorsFrame != null
-                                    ? pw.Image(pw.MemoryImage(avoidColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 320, height: 320, decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.redAccent, width: 2))),
+                                child: pw.Stack(
+                                  alignment: pw.Alignment.center,
+                                  children: [
+                                    if (mapImageBytes != null)
+                                      pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
+                                    if (avoidColorsFrame != null)
+                                      pw.Image(pw.MemoryImage(avoidColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
+                                  ],
+                                ),
                               ),
                               pw.Spacer(),
                               buildFooter(),
@@ -1112,11 +1377,7 @@ jobs:
                             children: [
                               buildHeader('GLOHANI VASTU® DASHA - DISHA THERAPY'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 8),
                               pw.Bullet(text: 'Suggested Remedies Balcony: Aligned to East & South.'),
                               pw.Bullet(text: 'Suggested Remedies Toilet: Balanced via Brass & Copper strips.'),
@@ -1132,11 +1393,7 @@ jobs:
                             children: [
                               buildHeader('GLOHANI VASTU® DASHA - DISHA ACTIVATION'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 8),
                               pw.Bullet(text: 'Activation SW Energy: Earth element stability enhancer.'),
                               pw.Bullet(text: 'Activation SE Energy: Cash liquidity and fire booster.'),
@@ -1152,11 +1409,7 @@ jobs:
                             children: [
                               buildHeader('GLOHANI VASTU® DIRECTIONAL ENERGY ACTIVATION'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 8),
                               pw.Text('16 Directional Energetic Ports Activated for Prosperity & Peace.', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
                               pw.Spacer(),
@@ -1170,11 +1423,7 @@ jobs:
                             children: [
                               buildHeader('BASIC INTERIOR POSITION'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 6),
                               pw.Wrap(
                                 spacing: 10,
@@ -1199,11 +1448,7 @@ jobs:
                             children: [
                               buildHeader('AUSPICIOUS INDOOR PLANT'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 8),
                               pw.Table.fromTextArray(
                                 headers: ['Plant Name', 'Scientific Name', 'Ideal Zone', 'Vastu Benefit'],
@@ -1230,11 +1475,7 @@ jobs:
                             children: [
                               buildHeader('MODERN GADGETS POSITION'),
                               pw.SizedBox(height: 6),
-                              pw.Center(
-                                child: vastu16Zones != null
-                                    ? pw.Image(pw.MemoryImage(vastu16Zones), width: 330, height: 330, fit: pw.BoxFit.contain)
-                                    : pw.Container(width: 300, height: 300, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                              ),
+                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu16Zones, degree: client.northDegree)),
                               pw.SizedBox(height: 8),
                               pw.Table.fromTextArray(
                                 headers: ['Gadget / Equipment', 'Optimal Vastu Position', 'Directional Frequency'],
