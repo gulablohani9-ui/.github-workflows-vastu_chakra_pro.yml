@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Glohani Vastu Complete 37-Page Suite
+      - name: Generate Glohani Vastu Exact Excel & Dynamic Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.glohani.vastureport --project-name=glohani_vastu_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: glohani_vastu_pro
-          description: Glohani Vastu Exact 37-Page Professional Evaluation Suite
+          description: Glohani Vastu Exact 37-Page Evaluation Suite with True Excel Engine
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -986,7 +986,6 @@ jobs:
               required Uint8List? chakraAsset,
               required double degree,
               double size = 330,
-              bool drawPlot = true,
             }) {
               return pw.Container(
                 width: size,
@@ -996,46 +995,11 @@ jobs:
                   children: [
                     if (mapImageBytes != null)
                       pw.Image(pw.MemoryImage(mapImageBytes!), width: size - 30, height: size - 30, fit: pw.BoxFit.contain),
-                    
-                    if (drawPlot && plotPoints.length >= 3)
-                      pw.CustomPaint(
-                        size: PdfPoint(size, size),
-                        painter: (PdfGraphics canvas, PdfPoint sz) {
-                          canvas.setColor(PdfColors.amber800);
-                          canvas.setLineWidth(1.8);
-                          double minX = plotPoints.map((p) => p.dx).reduce(math.min);
-                          double maxX = plotPoints.map((p) => p.dx).reduce(math.max);
-                          double minY = plotPoints.map((p) => p.dy).reduce(math.min);
-                          double maxY = plotPoints.map((p) => p.dy).reduce(math.max);
-
-                          double w = (maxX - minX);
-                          double h = (maxY - minY);
-                          if (w > 0 && h > 0) {
-                            double scale = (size - 60) / math.max(w, h);
-                            double offsetX = (size - w * scale) / 2;
-                            double offsetY = (size - h * scale) / 2;
-
-                            List<PdfPoint> poly = plotPoints.map((p) {
-                              return PdfPoint(offsetX + (p.dx - minX) * scale, offsetY + (p.dy - minY) * scale);
-                            }).toList();
-
-                            canvas.moveTo(poly[0].x, poly[0].y);
-                            for (int i = 1; i < poly.length; i++) {
-                              canvas.lineTo(poly[i].x, poly[i].y);
-                            }
-                            canvas.closePath();
-                            canvas.strokePath();
-                          }
-                        },
-                      ),
 
                     if (chakraAsset != null)
-                      pw.Opacity(
-                        opacity: mapImageBytes != null ? 0.75 : 1.0,
-                        child: pw.Transform.rotate(
-                          angle: (degree) * (math.pi / 180.0),
-                          child: pw.Image(pw.MemoryImage(chakraAsset), width: size, height: size, fit: pw.BoxFit.contain),
-                        ),
+                      pw.Transform.rotate(
+                        angle: (degree) * (math.pi / 180.0),
+                        child: pw.Image(pw.MemoryImage(chakraAsset), width: size, height: size, fit: pw.BoxFit.contain),
                       ),
                     pw.Container(
                       width: 8,
@@ -1047,7 +1011,7 @@ jobs:
               );
             }
 
-            // Page 10: 45 Devta Grid Overlay (Crisp Vector Grid + Brahmasthan + Devta coordinates)
+            // Page 10: 45 Devta Grid Overlay (Map in background with transparent devta overlay)
             pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
               required double degree,
@@ -1111,11 +1075,6 @@ jobs:
                               drawRadial(cx - w33 / 2, by, 5, py);
                               drawRadial(cx + w33 / 2, by, w - 5, py);
                             }
-
-                            drawRadial(cx - w33 / 2, cy - h33 / 2, 5, 5);
-                            drawRadial(cx + w33 / 2, cy - h33 / 2, w - 5, 5);
-                            drawRadial(cx - w33 / 2, cy + h33 / 2, 5, h - 5);
-                            drawRadial(cx + w33 / 2, cy + h33 / 2, w - 5, h - 5);
                           },
                         ),
                       ),
@@ -1134,7 +1093,7 @@ jobs:
               );
             }
 
-            // Page 13 & 14: Color Frame with Map Center Layer
+            // Page 13 & 14: Color Frame with Map Visible (Using BlendMode.multiply to make black/dark backgrounds transparent)
             pw.Widget buildColorPlanPlate({
               required Uint8List? frameBytes,
               required bool isAvoidPlan,
@@ -1142,23 +1101,13 @@ jobs:
               return pw.Container(
                 width: 350,
                 height: 350,
-                color: PdfColors.white,
                 child: pw.Stack(
                   alignment: pw.Alignment.center,
                   children: [
-                    if (frameBytes != null)
-                      pw.Image(pw.MemoryImage(frameBytes), width: 350, height: 350, fit: pw.BoxFit.contain),
-
-                    // Opaque white canvas with floor plan on top
                     if (mapImageBytes != null)
-                      pw.Container(
-                        width: 275,
-                        height: 275,
-                        color: PdfColors.white,
-                        child: pw.Center(
-                          child: pw.Image(pw.MemoryImage(mapImageBytes!), width: 265, height: 265, fit: pw.BoxFit.contain),
-                        ),
-                      ),
+                      pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
+                    if (frameBytes != null)
+                      pw.Image(pw.MemoryImage(frameBytes), width: 350, height: 350, fit: pw.BoxFit.contain, blendMode: PdfBlendMode.multiply),
                   ],
                 ),
               );
@@ -1786,14 +1735,27 @@ jobs:
                             ],
                           );
 
-                        // PAGE 10: 45 DEVTA GRID (CLEAN MAP + CONCENTRIC GRID)
+                        // PAGE 10: 45 DEVTA GRID (MAP VISIBLE VIA MULTIPLY)
                         case 10:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                               pw.SizedBox(height: 4),
-                              pw.Center(child: buildConcentric45DevtaPlate(bgMap: mapImageBytes, degree: client.northDegree)),
+                              pw.Center(
+                                child: pw.Container(
+                                  width: 330,
+                                  height: 330,
+                                  child: pw.Stack(
+                                    alignment: pw.Alignment.center,
+                                    children: [
+                                      if (mapImageBytes != null)
+                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
+                                      buildConcentric45DevtaPlate(bgMap: null, degree: client.northDegree),
+                                    ],
+                                  ),
+                                ),
+                              ),
                               pw.SizedBox(height: 6),
                               pw.Text('45 Devtas Breakdown (Brahmasthan 45=Brahma):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
                               pw.Wrap(
@@ -1918,7 +1880,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 13: RECOMMENDED COLOR PLAN (MAP VISIBLE)
+                        // PAGE 13: RECOMMENDED COLOR PLAN (MAP VISIBLE VIA MULTIPLY)
                         case 13:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1932,7 +1894,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 14: COLOR TO AVOID PLAN (MAP VISIBLE)
+                        // PAGE 14: COLOR TO AVOID PLAN (MAP VISIBLE VIA MULTIPLY)
                         case 14:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2249,4 +2211,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Glohani-Vastu-Report-Pro
-          path: artifact_dir/Glohani-Vastu-Report-Pro.apk
+          path: artifact_dir/Glohani-VSDS-Report-Pro.apk
