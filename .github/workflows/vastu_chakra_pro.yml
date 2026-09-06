@@ -1011,7 +1011,6 @@ jobs:
               );
             }
 
-            // Page 10: 45 Devta Grid Overlay (Map in background with transparent devta overlay)
             pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
               required double degree,
@@ -1093,7 +1092,6 @@ jobs:
               );
             }
 
-            // Page 13 & 14: Color Frame with Map Visible (Using BlendMode.multiply to make black/dark backgrounds transparent)
             pw.Widget buildColorPlanPlate({
               required Uint8List? frameBytes,
               required bool isAvoidPlan,
@@ -1107,7 +1105,7 @@ jobs:
                     if (mapImageBytes != null)
                       pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
                     if (frameBytes != null)
-                      pw.Image(pw.MemoryImage(frameBytes), width: 350, height: 350, fit: pw.BoxFit.contain, blendMode: PdfBlendMode.multiply),
+                      pw.Image(pw.MemoryImage(frameBytes), width: 350, height: 350, fit: pw.BoxFit.contain),
                   ],
                 ),
               );
@@ -1735,7 +1733,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 10: 45 DEVTA GRID (MAP VISIBLE VIA MULTIPLY)
+                        // PAGE 10: 45 DEVTA GRID (MAP VISIBLE)
                         case 10:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1812,7 +1810,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 12: EXACT TRUE EXCEL GRAPH & SUMMARY
+                        // PAGE 12: TRUE EXCEL ZONAL STRENGTH GRAPH
                         case 12:
                           final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree, client.manualZonalStrength);
                           final Map<String, double> areas = data['areas'];
@@ -1880,7 +1878,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 13: RECOMMENDED COLOR PLAN (MAP VISIBLE VIA MULTIPLY)
+                        // PAGE 13: RECOMMENDED COLOR PLAN (MAP VISIBLE)
                         case 13:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1894,7 +1892,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 14: COLOR TO AVOID PLAN (MAP VISIBLE VIA MULTIPLY)
+                        // PAGE 14: COLOR TO AVOID PLAN (MAP VISIBLE)
                         case 14:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2211,4 +2209,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Glohani-Vastu-Report-Pro
-          path: artifact_dir/Glohani-VSDS-Report-Pro.apk
+          path: artifact_dir/Glohani-Vastu-Report-Pro.apk
