@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Glohani Vastu Dynamic 37-Page Suite
+      - name: Generate Glohani Vastu Complete 37-Page Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.glohani.vastureport --project-name=glohani_vastu_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: glohani_vastu_pro
-          description: Glohani Vastu Fully Dynamic 37-Page Professional Suite
+          description: Glohani Vastu Exact 37-Page Professional Evaluation Suite
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -316,7 +316,6 @@ jobs:
                 });
               }
 
-              // Dynamic Hits
               List<Map<String, String>> posHits = [];
               List<Map<String, String>> negHits = [];
 
@@ -427,33 +426,40 @@ jobs:
             double b = (l * l) / 2.0;
             double diag = math.atan(l / w) * 180.0 / math.pi;
 
-            final zonesOrder = ['E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N', 'NNE', 'NE', 'ENE'];
+            final zonesGF = ['N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'ESE', 'E', 'ENE', 'NE', 'NNE'];
             Map<String, double> areas = {};
 
-            double currD = northDeg + 11.25;
+            double currD = (northDeg + 11.25) % 360.0;
 
-            for (String z in zonesOrder) {
+            for (String z in zonesGF) {
               if (manualMap.containsKey(z)) {
                 areas[z] = manualMap[z]!;
                 continue;
               }
 
-              double d = currD % 360.0;
-              if (d < 0) d += 360.0;
+              double d = currD;
               double e = (d - 22.5) % 360.0;
               if (e < 0) e += 360.0;
 
-              bool c1 = ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) ||
-                  ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0));
+              bool c1A = (d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag);
+              bool c1B = (d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) &&
+                         (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0);
+              int fVal = (c1A || c1B) ? 1 : 0;
 
-              bool c2 = ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) ||
-                  ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag)));
+              bool c2A = (d <= (180.0 - diag) % 360.0 && d >= diag) && (e <= (180.0 - diag) % 360.0 && e >= diag);
+              bool c2B = (d <= (360.0 - diag) % 360.0 && d >= (180.0 + diag) % 360.0) &&
+                         (e <= (360.0 - diag) % 360.0 && e >= (180.0 + diag) % 360.0);
+              int gVal = (c2A || c2B) ? 2 : 0;
 
-              bool c3 = (e <= diag && d >= diag && d < 90.0) ||
-                  (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0);
+              bool c3A = (e <= diag && d >= diag && d < 90.0);
+              bool c3B = (e <= (180.0 + diag) % 360.0 && e > 180.0 && d >= (180.0 + diag) % 360.0 && d < 270.0);
+              int hVal = (c3A || c3B) ? 3 : 0;
 
-              bool c4 = (e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) ||
-                  (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0);
+              bool c4A = (e <= (180.0 - diag) % 360.0 && e > 90.0 && d >= (180.0 - diag) % 360.0 && d < 180.0);
+              bool c4B = (e <= (360.0 - diag) % 360.0 && e > 270.0 && d >= (360.0 - diag) % 360.0 && d < 360.0);
+              int iVal = (c4A || c4B) ? 4 : 0;
+
+              int jVal = fVal + gVal + hVal + iVal;
 
               double dRad = d * math.pi / 180.0;
               double eRad = e * math.pi / 180.0;
@@ -464,10 +470,10 @@ jobs:
               double pVal = wl2 - a * math.tan((180.0 - d) * math.pi / 180.0) + wl2 - b * math.tan((e - 90.0) * math.pi / 180.0);
 
               double areaVal = wl2;
-              if (c1) areaVal = mVal.abs();
-              else if (c2) areaVal = nVal.abs();
-              else if (c3) areaVal = oVal.abs();
-              else if (c4) areaVal = pVal.abs();
+              if (jVal == 1) areaVal = mVal.abs();
+              else if (jVal == 2) areaVal = nVal.abs();
+              else if (jVal == 3) areaVal = oVal.abs();
+              else if (jVal == 4) areaVal = pVal.abs();
 
               areas[z] = areaVal;
               currD = e;
@@ -486,7 +492,7 @@ jobs:
               'balance': balance,
               'upperBal': upperBal,
               'lowerBal': lowerBal,
-              'zones': zonesOrder,
+              'graphOrder': ['E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW', 'N', 'NNE', 'NE', 'ENE'],
             };
           }
 
@@ -522,6 +528,7 @@ jobs:
                 PdfReportPreviewScreen(
                   client: client,
                   mapImageBytes: mapImageBytes,
+                  plotPoints: plotPoints,
                 ),
               ];
 
@@ -555,6 +562,8 @@ jobs:
 
           class _ClientInputScreenState extends State<ClientInputScreen> {
             Widget buildPersonEditor(String title, PersonProfile p) {
+              final astro = p.calculateAstroEngine();
+
               return Card(
                 color: const Color(0xFF1E1E1E),
                 margin: const EdgeInsets.symmetric(vertical: 8),
@@ -615,9 +624,21 @@ jobs:
                         decoration: const InputDecoration(labelText: 'Birth Place (City, State)', border: OutlineInputBorder(), isDense: true),
                         onChanged: (v) { p.birthPlace = v; widget.onUpdate(); },
                       ),
-                      const SizedBox(height: 4),
-                      Text('Mulank: ${p.mulank} | Bhagyank: ${p.bhagyank} | Name No: ${p.nameNumber} | Age: ${p.ageYears}Y',
-                          style: const TextStyle(fontSize: 11, color: Colors.amberAccent)),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: const Color(0xFF282828), borderRadius: BorderRadius.circular(6)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Live Calculated: ${astro['lagna']} Lagna | ${astro['rashi']} Rashi | ${astro['nakshatra']} Nakshatra',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.tealAccent)),
+                            const SizedBox(height: 2),
+                            Text('Active Mahadasha: ${astro['activeDasha']} | Mulank: ${p.mulank} | Bhagyank: ${p.bhagyank} | Name No: ${p.nameNumber}',
+                                style: const TextStyle(fontSize: 10.5, color: Colors.amberAccent)),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -635,6 +656,34 @@ jobs:
                       initialValue: widget.client.address,
                       decoration: const InputDecoration(labelText: 'Property Address', border: OutlineInputBorder()),
                       onChanged: (v) { widget.client.address = v; widget.onUpdate(); },
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: widget.client.plotWidth.toString(),
+                            decoration: const InputDecoration(labelText: 'Plot Width (ft)', border: OutlineInputBorder(), isDense: true),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              widget.client.plotWidth = double.tryParse(v) ?? 18.0;
+                              widget.onUpdate();
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: widget.client.plotLength.toString(),
+                            decoration: const InputDecoration(labelText: 'Plot Length (ft)', border: OutlineInputBorder(), isDense: true),
+                            keyboardType: TextInputType.number,
+                            onChanged: (v) {
+                              widget.client.plotLength = double.tryParse(v) ?? 20.0;
+                              widget.onUpdate();
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
@@ -679,6 +728,7 @@ jobs:
 
           class _VastuMapEditorScreenState extends State<VastuMapEditorScreen> {
             bool isDotMode = false;
+            int? draggedDotIndex;
             final TransformationController _controller = TransformationController();
 
             @override
@@ -687,6 +737,18 @@ jobs:
                 appBar: AppBar(
                   title: const Text('Upload & Calibrate Floor Plan'),
                   actions: [
+                    IconButton(
+                      icon: const Icon(Icons.undo, color: Colors.amberAccent),
+                      tooltip: 'Undo Last Dot',
+                      onPressed: () {
+                        if (widget.points.isNotEmpty) {
+                          setState(() {
+                            widget.points.removeLast();
+                            widget.onPointsUpdate(List.from(widget.points));
+                          });
+                        }
+                      },
+                    ),
                     IconButton(
                       icon: const Icon(Icons.add_photo_alternate, color: Colors.tealAccent),
                       tooltip: 'Upload Floor Plan',
@@ -700,8 +762,13 @@ jobs:
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                      tooltip: 'Clear Boundary Dots',
-                      onPressed: () => widget.onPointsUpdate([]),
+                      tooltip: 'Clear All Dots',
+                      onPressed: () {
+                        setState(() {
+                          widget.points.clear();
+                          widget.onPointsUpdate([]);
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -731,7 +798,7 @@ jobs:
                                 foregroundColor: isDotMode ? Colors.black : Colors.white70,
                               ),
                               icon: const Icon(Icons.adjust, size: 16),
-                              label: const Text('2. Set Plot Dots', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              label: const Text('2. Set / Drag Dots', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () => setState(() => isDotMode = true),
                             ),
                           ),
@@ -770,11 +837,26 @@ jobs:
                           if (isDotMode)
                             GestureDetector(
                               onPanDown: (d) {
+                                for (int i = 0; i < widget.points.length; i++) {
+                                  if ((widget.points[i] - d.localPosition).distance < 28) {
+                                    draggedDotIndex = i;
+                                    return;
+                                  }
+                                }
                                 setState(() {
                                   widget.points.add(d.localPosition);
                                   widget.onPointsUpdate(List.from(widget.points));
                                 });
                               },
+                              onPanUpdate: (d) {
+                                if (draggedDotIndex != null) {
+                                  setState(() {
+                                    widget.points[draggedDotIndex!] = d.localPosition;
+                                    widget.onPointsUpdate(List.from(widget.points));
+                                  });
+                                }
+                              },
+                              onPanEnd: (_) => draggedDotIndex = null,
                               child: CustomPaint(painter: PlotPolygonPainter(points: widget.points)),
                             )
                           else
@@ -839,11 +921,13 @@ jobs:
           class PdfReportPreviewScreen extends StatelessWidget {
             final MasterClientData client;
             final Uint8List? mapImageBytes;
+            final List<Offset> plotPoints;
 
             const PdfReportPreviewScreen({
               super.key,
               required this.client,
               required this.mapImageBytes,
+              required this.plotPoints,
             });
 
             Future<Uint8List?> _loadAssetBytes(String path) async {
@@ -902,6 +986,7 @@ jobs:
               required Uint8List? chakraAsset,
               required double degree,
               double size = 330,
+              bool drawPlot = true,
             }) {
               return pw.Container(
                 width: size,
@@ -911,6 +996,39 @@ jobs:
                   children: [
                     if (mapImageBytes != null)
                       pw.Image(pw.MemoryImage(mapImageBytes!), width: size - 30, height: size - 30, fit: pw.BoxFit.contain),
+                    
+                    if (drawPlot && plotPoints.length >= 3)
+                      pw.CustomPaint(
+                        size: PdfPoint(size, size),
+                        painter: (PdfGraphics canvas, PdfPoint sz) {
+                          canvas.setColor(PdfColors.amber800);
+                          canvas.setLineWidth(1.8);
+                          double minX = plotPoints.map((p) => p.dx).reduce(math.min);
+                          double maxX = plotPoints.map((p) => p.dx).reduce(math.max);
+                          double minY = plotPoints.map((p) => p.dy).reduce(math.min);
+                          double maxY = plotPoints.map((p) => p.dy).reduce(math.max);
+
+                          double w = (maxX - minX);
+                          double h = (maxY - minY);
+                          if (w > 0 && h > 0) {
+                            double scale = (size - 60) / math.max(w, h);
+                            double offsetX = (size - w * scale) / 2;
+                            double offsetY = (size - h * scale) / 2;
+
+                            List<PdfPoint> poly = plotPoints.map((p) {
+                              return PdfPoint(offsetX + (p.dx - minX) * scale, offsetY + (p.dy - minY) * scale);
+                            }).toList();
+
+                            canvas.moveTo(poly[0].x, poly[0].y);
+                            for (int i = 1; i < poly.length; i++) {
+                              canvas.lineTo(poly[i].x, poly[i].y);
+                            }
+                            canvas.closePath();
+                            canvas.strokePath();
+                          }
+                        },
+                      ),
+
                     if (chakraAsset != null)
                       pw.Opacity(
                         opacity: mapImageBytes != null ? 0.75 : 1.0,
@@ -924,6 +1042,123 @@ jobs:
                       height: 8,
                       decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.red800),
                     ),
+                  ],
+                ),
+              );
+            }
+
+            // Page 10: 45 Devta Grid Overlay (Crisp Vector Grid + Brahmasthan + Devta coordinates)
+            pw.Widget buildConcentric45DevtaPlate({
+              required Uint8List? bgMap,
+              required double degree,
+            }) {
+              return pw.Container(
+                width: 350,
+                height: 350,
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    if (bgMap != null)
+                      pw.Image(pw.MemoryImage(bgMap), width: 310, height: 310, fit: pw.BoxFit.contain),
+
+                    pw.Transform.rotate(
+                      angle: (degree) * (math.pi / 180),
+                      child: pw.Container(
+                        width: 290,
+                        height: 320,
+                        child: pw.CustomPaint(
+                          size: const PdfPoint(290, 320),
+                          painter: (PdfGraphics canvas, PdfPoint size) {
+                            double w = 290;
+                            double h = 320;
+                            double cx = w / 2;
+                            double cy = h / 2;
+
+                            canvas.setColor(PdfColors.brown800);
+                            canvas.setLineWidth(1.2);
+                            canvas.drawRect(5, 5, w - 10, h - 10);
+                            canvas.strokePath();
+
+                            double w77 = (w - 10) * 0.77;
+                            double h77 = (h - 10) * 0.77;
+                            canvas.drawRect(cx - w77 / 2, cy - h77 / 2, w77, h77);
+                            canvas.strokePath();
+
+                            double w33 = (w - 10) * 0.33;
+                            double h33 = (h - 10) * 0.33;
+                            canvas.setColor(PdfColors.red900);
+                            canvas.setLineWidth(1.4);
+                            canvas.drawRect(cx - w33 / 2, cy - h33 / 2, w33, h33);
+                            canvas.strokePath();
+
+                            canvas.setColor(PdfColors.brown600);
+                            canvas.setLineWidth(0.85);
+
+                            void drawRadial(double x1, double y1, double x2, double y2) {
+                              canvas.drawLine(x1, y1, x2, y2);
+                              canvas.strokePath();
+                            }
+
+                            for (int i = 1; i <= 6; i++) {
+                              double px = 5 + ((w - 10) / 7) * i;
+                              double bx = (cx - w33 / 2) + (w33 / 7) * i;
+                              drawRadial(bx, cy - h33 / 2, px, 5);
+                              drawRadial(bx, cy + h33 / 2, px, h - 5);
+                            }
+                            for (int i = 1; i <= 10; i++) {
+                              double py = 5 + ((h - 10) / 11) * i;
+                              double by = (cy - h33 / 2) + (h33 / 11) * i;
+                              drawRadial(cx - w33 / 2, by, 5, py);
+                              drawRadial(cx + w33 / 2, by, w - 5, py);
+                            }
+
+                            drawRadial(cx - w33 / 2, cy - h33 / 2, 5, 5);
+                            drawRadial(cx + w33 / 2, cy - h33 / 2, w - 5, 5);
+                            drawRadial(cx - w33 / 2, cy + h33 / 2, 5, h - 5);
+                            drawRadial(cx + w33 / 2, cy + h33 / 2, w - 5, h - 5);
+                          },
+                        ),
+                      ),
+                    ),
+
+                    pw.Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.red800),
+                    ),
+                    pw.Positioned(
+                      child: pw.Text('Brahma (33%)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Page 13 & 14: Color Frame with Map Center Layer
+            pw.Widget buildColorPlanPlate({
+              required Uint8List? frameBytes,
+              required bool isAvoidPlan,
+            }) {
+              return pw.Container(
+                width: 350,
+                height: 350,
+                color: PdfColors.white,
+                child: pw.Stack(
+                  alignment: pw.Alignment.center,
+                  children: [
+                    if (frameBytes != null)
+                      pw.Image(pw.MemoryImage(frameBytes), width: 350, height: 350, fit: pw.BoxFit.contain),
+
+                    // Opaque white canvas with floor plan on top
+                    if (mapImageBytes != null)
+                      pw.Container(
+                        width: 275,
+                        height: 275,
+                        color: PdfColors.white,
+                        child: pw.Center(
+                          child: pw.Image(pw.MemoryImage(mapImageBytes!), width: 265, height: 265, fit: pw.BoxFit.contain),
+                        ),
+                      ),
                   ],
                 ),
               );
@@ -943,9 +1178,7 @@ jobs:
                 bool isMissing = nums == 'X';
                 return pw.Container(
                   height: 48,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey500, width: 0.8),
-                  ),
+                  decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey500, width: 0.8)),
                   child: pw.Center(
                     child: pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -960,11 +1193,7 @@ jobs:
                         ),
                         pw.Text(
                           dir,
-                          style: pw.TextStyle(
-                            fontSize: 7.5,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.teal800,
-                          ),
+                          style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800),
                         ),
                       ],
                     ),
@@ -1291,7 +1520,6 @@ jobs:
               final recommendedColorsFrame = await _loadAssetBytes('assets/images/recommended_colors_frame.png');
               final vastu16Zones = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final vastu32Padas = await _loadAssetBytes('assets/images/vastu_32_padas.png');
-              final vastu45Devtas = await _loadAssetBytes('assets/images/vastu_45_devtas.png');
 
               for (int pNum = 1; pNum <= 37; pNum++) {
                 pdf.addPage(
@@ -1558,30 +1786,14 @@ jobs:
                             ],
                           );
 
+                        // PAGE 10: 45 DEVTA GRID (CLEAN MAP + CONCENTRIC GRID)
                         case 10:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                               pw.SizedBox(height: 4),
-                              pw.Center(
-                                child: pw.Container(
-                                  width: 330,
-                                  height: 330,
-                                  child: pw.Stack(
-                                    alignment: pw.Alignment.center,
-                                    children: [
-                                      if (mapImageBytes != null)
-                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
-                                      if (vastu45Devtas != null)
-                                        pw.Opacity(
-                                          opacity: 0.8,
-                                          child: pw.Image(pw.MemoryImage(vastu45Devtas), width: 330, height: 330, fit: pw.BoxFit.contain),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                              pw.Center(child: buildConcentric45DevtaPlate(bgMap: mapImageBytes, degree: client.northDegree)),
                               pw.SizedBox(height: 6),
                               pw.Text('45 Devtas Breakdown (Brahmasthan 45=Brahma):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
                               pw.Wrap(
@@ -1638,14 +1850,24 @@ jobs:
                             ],
                           );
 
+                        // PAGE 12: EXACT TRUE EXCEL GRAPH & SUMMARY
                         case 12:
                           final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree, client.manualZonalStrength);
                           final Map<String, double> areas = data['areas'];
                           final double balance = data['balance'];
                           final double upperBal = data['upperBal'];
                           final double lowerBal = data['lowerBal'];
-                          final List<String> zones = data['zones'];
+                          final List<String> graphOrder = data['graphOrder'];
                           double maxScale = areas.values.reduce(math.max) * 1.15;
+
+                          List<String> dynamicCut = [];
+                          List<String> dynamicExt = [];
+                          for (String z in graphOrder) {
+                            double a = areas[z]!;
+                            double r = a / balance;
+                            if (a < lowerBal) dynamicCut.add('$z (${r.toStringAsFixed(2)})');
+                            else if (a > upperBal) dynamicExt.add('$z (${r.toStringAsFixed(2)})');
+                          }
 
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1654,8 +1876,8 @@ jobs:
                               pw.Row(
                                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                                 children: [
-                                  pw.Text('Lower Unit: 0.65 | Balance Unit: 1.00 | Upper Unit: 1.34', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
-                                  pw.Text('Calibrated Zonal Strength', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                                  pw.Text('Lower Unit: ${(lowerBal / balance).toStringAsFixed(2)} | Balance Unit: 1.00 | Upper Unit: ${(upperBal / balance).toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
+                                  pw.Text('Calibrated via Exact Vastu Tips Excel Engine', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
                                 ],
                               ),
                               pw.SizedBox(height: 15),
@@ -1666,7 +1888,7 @@ jobs:
                                 child: pw.Row(
                                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                                   children: List.generate(16, (i) {
-                                    String z = zones[i];
+                                    String z = graphOrder[i];
                                     double rawArea = areas[z]!;
                                     double ratio = rawArea / balance;
                                     PdfColor barColor = rawArea < lowerBal ? PdfColors.red : (rawArea > upperBal ? PdfColors.orange : PdfColors.green);
@@ -1688,14 +1910,15 @@ jobs:
                                 ),
                               ),
                               pw.SizedBox(height: 12),
-                              pw.Text('Zone Analysis Summary:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
-                              pw.Bullet(text: 'Zones Below Lower Balance Line: E(0.46), ESE(0.29), SE(0.35), W(0.50), WNW(0.53)'),
-                              pw.Bullet(text: 'Zones Above Upper Balance Line: S(1.64), SSW(1.58), SW(1.60), NE(1.42), ENE(1.68)'),
+                              pw.Text('Zone Analysis Summary (Excel Calculated for ${client.plotWidth}ft x ${client.plotLength}ft @ ${client.northDegree.toInt()}° North):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9.5)),
+                              pw.Bullet(text: 'Zones Below Lower Balance Line (Cut/Depleted): ${dynamicCut.isEmpty ? "None" : dynamicCut.join(", ")}'),
+                              pw.Bullet(text: 'Zones Above Upper Balance Line (Extended): ${dynamicExt.isEmpty ? "None" : dynamicExt.join(", ")}'),
                               pw.Spacer(),
                               buildFooter(),
                             ],
                           );
 
+                        // PAGE 13: RECOMMENDED COLOR PLAN (MAP VISIBLE)
                         case 13:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1703,27 +1926,13 @@ jobs:
                               buildHeader('RECOMMENDED COLOR PLAN'),
                               pw.Text('Use neutral colors in areas where no specific color is recommended. Neutral colors refer to light shades of white and off-white.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
-                              pw.Center(
-                                child: pw.Container(
-                                  width: 350,
-                                  height: 350,
-                                  color: PdfColors.white,
-                                  child: pw.Stack(
-                                    alignment: pw.Alignment.center,
-                                    children: [
-                                      if (mapImageBytes != null)
-                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 280, height: 280, fit: pw.BoxFit.contain),
-                                      if (recommendedColorsFrame != null)
-                                        pw.Image(pw.MemoryImage(recommendedColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                              pw.Center(child: buildColorPlanPlate(frameBytes: recommendedColorsFrame, isAvoidPlan: false)),
                               pw.Spacer(),
                               buildFooter(),
                             ],
                           );
 
+                        // PAGE 14: COLOR TO AVOID PLAN (MAP VISIBLE)
                         case 14:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1731,22 +1940,7 @@ jobs:
                               buildHeader('COLOR TO AVOID PLAN'),
                               pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion and negative vibrations.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
-                              pw.Center(
-                                child: pw.Container(
-                                  width: 350,
-                                  height: 350,
-                                  color: PdfColors.white,
-                                  child: pw.Stack(
-                                    alignment: pw.Alignment.center,
-                                    children: [
-                                      if (mapImageBytes != null)
-                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 280, height: 280, fit: pw.BoxFit.contain),
-                                      if (avoidColorsFrame != null)
-                                        pw.Image(pw.MemoryImage(avoidColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                              pw.Center(child: buildColorPlanPlate(frameBytes: avoidColorsFrame, isAvoidPlan: true)),
                               pw.Spacer(),
                               buildFooter(),
                             ],
