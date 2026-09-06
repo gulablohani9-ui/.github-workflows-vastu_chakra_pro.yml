@@ -172,6 +172,35 @@ jobs:
               return sum;
             }
 
+            int get nameNumber {
+              const table = {
+                'A':1, 'I':1, 'J':1, 'Q':1, 'Y':1,
+                'B':2, 'K':2, 'R':2,
+                'C':3, 'G':3, 'L':3, 'S':3,
+                'D':4, 'M':4, 'T':4,
+                'E':5, 'H':5, 'N':5, 'X':5,
+                'U':6, 'V':6, 'W':6,
+                'O':7, 'Z':7,
+                'F':8, 'P':8
+              };
+              int total = 0;
+              for (int i = 0; i < name.length; i++) {
+                String ch = name[i].toUpperCase();
+                if (table.containsKey(ch)) {
+                  total += table[ch]!;
+                }
+              }
+              while (total > 9) {
+                int s = 0;
+                while (total > 0) {
+                  s += total % 10;
+                  total ~/= 10;
+                }
+                total = s;
+              }
+              return total == 0 ? 1 : total;
+            }
+
             Map<String, dynamic> calculateAstroEngine() {
               int y = dob.year;
               int m = dob.month;
@@ -276,7 +305,6 @@ jobs:
                 if (planets[k]! < 0) planets[k] = planets[k]! + 360.0;
               });
 
-              // Full detailed KP Planets Table list
               String formatDMS(double degVal) {
                 int d = degVal.floor();
                 int m = ((degVal - d) * 60).floor();
@@ -1772,6 +1800,93 @@ jobs:
               );
             }
 
+            // EXACT LO SHU GRID GENERATOR (PAGE 25 MATCH)
+            pw.Widget buildLoShuExactBox() {
+              String dobStr = "${client.dob.day}-${client.dob.month}-${client.dob.year}";
+              List<String> digits = dobStr.replaceAll('-', '').split('');
+
+              String getDigitsForCell(String numStr) {
+                int count = digits.where((d) => d == numStr).length;
+                if (count == 0) return 'X';
+                return List.filled(count, numStr).join(', ');
+              }
+
+              pw.Widget buildGridCell(String nums, String dir) {
+                bool isMissing = nums == 'X';
+                return pw.Container(
+                  height: 48,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey500, width: 0.8),
+                  ),
+                  child: pw.Center(
+                    child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          nums,
+                          style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: isMissing ? PdfColors.deepOrange700 : PdfColors.brown800,
+                          ),
+                        ),
+                        pw.Text(
+                          dir,
+                          style: pw.TextStyle(
+                            fontSize: 7.5,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.teal800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return pw.Container(
+                width: 220,
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400, width: 1.2),
+                  color: PdfColors.grey100,
+                ),
+                child: pw.Column(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                      child: pw.Column(
+                        children: [
+                          pw.Text('Name: ${client.name.toUpperCase()}', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                          pw.SizedBox(height: 2),
+                          pw.Text('D.O.B: $dobStr', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                        ],
+                      ),
+                    ),
+                    pw.Table(
+                      border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                      children: [
+                        pw.TableRow(children: [
+                          buildGridCell(getDigitsForCell('4'), 'SE'),
+                          buildGridCell(getDigitsForCell('9'), 'S'),
+                          buildGridCell(getDigitsForCell('2'), 'SW'),
+                        ]),
+                        pw.TableRow(children: [
+                          buildGridCell(getDigitsForCell('3'), 'E'),
+                          buildGridCell(getDigitsForCell('5'), 'CENTER'),
+                          buildGridCell(getDigitsForCell('7'), 'W'),
+                        ]),
+                        pw.TableRow(children: [
+                          buildGridCell(getDigitsForCell('8'), 'NE'),
+                          buildGridCell(getDigitsForCell('1'), 'N'),
+                          buildGridCell(getDigitsForCell('6'), 'NW'),
+                        ]),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+
             Map<String, dynamic> calculateExcelZonalStrength(double width, double length, double northDeg) {
               double w = width / 2.0;
               double l = length / 2.0;
@@ -1970,6 +2085,7 @@ jobs:
                         '22. Planets Degree & KP Sub-Lord Matrix',
                         '23. Planet to Planet Hit Matrix',
                         '24. Planet to House Hit Matrix',
+                        '25. Numerology & Lo Shu Grid Analysis',
                       ].map((item) => pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(vertical: 2.8),
                         child: pw.Text(item, style: const pw.TextStyle(fontSize: 9)),
@@ -2294,24 +2410,7 @@ jobs:
                 ),
               );
 
-              // 16. BASIC INTERIOR POSITION
-              pdf.addPage(
-                pw.Page(
-                  pageFormat: format,
-                  build: (pw.Context ctx) => pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      buildHeader('BASIC INTERIOR POSITION'),
-                      pw.SizedBox(height: 8),
-                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
-                      pw.Spacer(),
-                      buildFooter(),
-                    ],
-                  ),
-                ),
-              );
-
-              // 17. EXACT ASTRO-KP CHAKRA SUPERIMPOSED OVERLAY ON FLOOR PLAN
+              // 16. EXACT ASTRO-KP CHAKRA SUPERIMPOSED OVERLAY ON FLOOR PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2333,7 +2432,7 @@ jobs:
                 ),
               );
 
-              // 18. KP 12 HOUSES (CUSPS) SPATIAL FLOOR PLAN
+              // 17. KP 12 HOUSES (CUSPS) SPATIAL FLOOR PLAN
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2349,7 +2448,7 @@ jobs:
                       pw.Wrap(
                         spacing: 8,
                         runSpacing: 2,
-                        children: (astro['cusps'] as List<Map<String, dynamic>>).map((h) => pw.Text('H${h['h']} (${h['sign']}): ${(h['deg'] as double).toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 6.8))).toList(),
+                        children: (astro['cusps'] as List<Map<String, dynamic>>).map((h) => pw.Text('${h['h']} (${h['sign']}): ${(h['deg'] as double).toStringAsFixed(1)}°', style: const pw.TextStyle(fontSize: 6.8))).toList(),
                       ),
                       pw.Spacer(),
                       buildFooter(),
@@ -2358,7 +2457,7 @@ jobs:
                 ),
               );
 
-              // 19. 9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP
+              // 18. 9 PLANETARY VECTORS & SPATIAL HIT ENERGY MAP
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2384,7 +2483,7 @@ jobs:
                 ),
               );
 
-              // 20. AUSPICIOUS INDOOR PLANTS
+              // 19. AUSPICIOUS INDOOR PLANTS
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2401,7 +2500,24 @@ jobs:
                 ),
               );
 
-              // 21. EXACT VEDIC / KP CIRCULAR KUNDLI WHEEL & DASHA TABLE (AS IN PHOTO 2)
+              // 20. MODERN GADGETS POSITION
+              pdf.addPage(
+                pw.Page(
+                  pageFormat: format,
+                  build: (pw.Context ctx) => pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      buildHeader('MODERN GADGETS POSITION'),
+                      pw.SizedBox(height: 8),
+                      pw.Center(child: buildMasterIntegratedFloorMap(bgMap: mapImageBytes, chakraBytes: zonesChakra, degree: client.northDegree)),
+                      pw.Spacer(),
+                      buildFooter(),
+                    ],
+                  ),
+                ),
+              );
+
+              // 21. EXACT VEDIC / KP CIRCULAR KUNDLI WHEEL & DASHA TABLE
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2495,7 +2611,7 @@ jobs:
                 ),
               );
 
-              // 22. EXACT PLANETS TABLE (PHOTO 1 MATCH)
+              // 22. EXACT PLANETS TABLE
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2536,7 +2652,7 @@ jobs:
                 ),
               );
 
-              // 23. EXACT PLANET TO PLANET HIT (PHOTO 2 MATCH)
+              // 23. EXACT PLANET TO PLANET HIT
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2549,8 +2665,6 @@ jobs:
                         child: pw.Text('Planet to Planet Hit', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800)),
                       ),
                       pw.SizedBox(height: 8),
-                      
-                      // Positive Hit Header
                       pw.Container(
                         width: double.infinity,
                         padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -2573,8 +2687,6 @@ jobs:
                         border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
                       ),
                       pw.SizedBox(height: 14),
-
-                      // Negative Hit Header
                       pw.Container(
                         width: double.infinity,
                         padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -2605,7 +2717,7 @@ jobs:
                 ),
               );
 
-              // 24. EXACT PLANET TO HOUSE HIT (PHOTO 3 MATCH)
+              // 24. EXACT PLANET TO HOUSE HIT
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2618,8 +2730,6 @@ jobs:
                         child: pw.Text('Planet to House Hit', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800)),
                       ),
                       pw.SizedBox(height: 8),
-
-                      // Positive Hit Header
                       pw.Container(
                         width: double.infinity,
                         padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -2643,8 +2753,6 @@ jobs:
                         border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
                       ),
                       pw.SizedBox(height: 14),
-
-                      // Negative Hit Header
                       pw.Container(
                         width: double.infinity,
                         padding: const pw.EdgeInsets.symmetric(vertical: 3),
@@ -2676,64 +2784,144 @@ jobs:
                 ),
               );
 
-              // 25. NUMEROLOGY & LOSHU GRID
+              // 25. EXACT NUMEROLOGY & LO SHU GRID REPORT (MATCHES 1000067895.png)
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
-                  build: (pw.Context ctx) => pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      buildHeader('NUMEROLOGY & LOSHU GRID ANALYSIS'),
-                      pw.SizedBox(height: 12),
-                      pw.Row(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Container(
-                            width: 170,
-                            height: 170,
-                            decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 2)),
-                            child: pw.Table(
-                              border: pw.TableBorder.all(color: PdfColors.teal, width: 1.5),
-                              children: [
-                                pw.TableRow(children: [
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SE)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.dob.year % 10} (S)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (SW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                ]),
-                                pw.TableRow(children: [
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.mulank} (E)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('X (Center)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('7 (W)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                ]),
-                                pw.TableRow(children: [
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('${client.bhagyank} (NE)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('1 (N)', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)))),
-                                  pw.Container(height: 54, child: pw.Center(child: pw.Text('6 (NW)', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)))),
-                                ]),
-                              ],
+                  build: (pw.Context ctx) {
+                    int m = client.mulank;
+                    int b = client.bhagyank;
+                    int nameNum = client.nameNumber;
+
+                    const mulankFriends = {
+                      1: {'f': '2, 3, 9', 'e': '6, 8'},
+                      2: {'f': '1, 3', 'e': '4, 8, 9'},
+                      3: {'f': '1, 2, 9', 'e': '5, 6'},
+                      4: {'f': '1, 5, 6, 7', 'e': '4, 8, 9'},
+                      5: {'f': '1, 6', 'e': '2'},
+                      6: {'f': '3, 4, 5, 8, 9', 'e': '1, 2, 6, 7'},
+                      7: {'f': '1, 2, 4, 5', 'e': '3, 6, 7, 8, 9'},
+                      8: {'f': '3, 5, 6, 7', 'e': '1, 2, 4, 8'},
+                      9: {'f': '1, 2, 3, 5', 'e': '4, 7'},
+                    };
+
+                    String mFriends = mulankFriends[m]?['f'] ?? '1, 2, 3, 5';
+                    String mEnemies = mulankFriends[m]?['e'] ?? '4, 7';
+                    String bFriends = mulankFriends[b]?['f'] ?? '3, 4, 5, 8, 9';
+                    String bEnemies = mulankFriends[b]?['e'] ?? '1, 2, 6, 7';
+
+                    Set<int> setMF = mFriends.split(',').map((s) => int.tryParse(s.trim()) ?? 0).toSet();
+                    Set<int> setBF = bFriends.split(',').map((s) => int.tryParse(s.trim()) ?? 0).toSet();
+                    List<int> commonList = setMF.intersection(setBF).where((v) => v > 0).toList()..sort();
+                    String commonStr = commonList.isEmpty ? '1, 5' : commonList.join(', ');
+
+                    pw.Widget buildCheckRow(String title, String value, {bool isTitleBold = false, PdfColor? valColor}) {
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 2),
+                        child: pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Container(
+                              width: 10,
+                              height: 10,
+                              margin: const pw.EdgeInsets.only(top: 2, right: 6),
+                              decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.teal700),
+                              child: pw.Center(
+                                child: pw.Text('v', style: pw.TextStyle(fontSize: 6, color: PdfColors.white, fontWeight: pw.FontWeight.bold)),
+                              ),
                             ),
-                          ),
-                          pw.SizedBox(width: 20),
-                          pw.Expanded(
-                            child: pw.Column(
-                              crossAxisAlignment: pw.CrossAxisAlignment.start,
-                              children: [
-                                pw.Text('Psychic Number (Mulank): ${client.mulank}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                                pw.Text('Destiny Number (Bhagyank): ${client.bhagyank}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                                pw.SizedBox(height: 6),
-                                pw.Text('Favorable Numbers: 1, 3, 5, 9', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.teal)),
-                                pw.SizedBox(height: 8),
-                                pw.Text('Loshu Missing Numbers: 2, 4, 5, 6, 7'),
-                                pw.Text('Remedy: Place Brass or Earth elements in SW and Center to balance grid stability.'),
-                              ],
+                            pw.RichText(
+                              text: pw.TextSpan(
+                                text: title,
+                                style: pw.TextStyle(fontSize: 8.5, fontWeight: isTitleBold ? pw.FontWeight.bold : pw.FontWeight.normal, color: PdfColors.black),
+                                children: [
+                                  pw.TextSpan(
+                                    text: ' $value',
+                                    style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: valColor ?? PdfColors.black),
+                                  ),
+                                ],
+                              ),
                             ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        buildHeader('NUMEROLOGY & LO SHU GRID EVALUATION'),
+                        pw.SizedBox(height: 10),
+                        
+                        // Centered Lo Shu Box
+                        pw.Center(child: buildLoShuExactBox()),
+                        pw.SizedBox(height: 12),
+
+                        // Section Heading with Astrological Motif
+                        pw.Center(
+                          child: pw.Text('* Numerology *', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800)),
+                        ),
+                        pw.SizedBox(height: 8),
+
+                        // Name Result
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            text: 'Result for Name: ',
+                            style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                            children: [
+                              pw.TextSpan(
+                                text: client.name.toUpperCase(),
+                                style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      pw.Spacer(),
-                      buildFooter(),
-                    ],
-                  ),
+                        ),
+                        pw.SizedBox(height: 3),
+                        buildCheckRow('Name Number:', '$nameNum'),
+                        pw.SizedBox(height: 6),
+
+                        // DOB Result
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            text: 'Results for Date of Birth: ',
+                            style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                            children: [
+                              pw.TextSpan(
+                                text: '${client.dob.day}/${client.dob.month}/${client.dob.year}',
+                                style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800),
+                              ),
+                            ],
+                          ),
+                        ),
+                        pw.SizedBox(height: 3),
+                        buildCheckRow('Psychic Number (Mulank):', '$m'),
+                        buildCheckRow('Destiny Number (Bhagyank):', '$b'),
+                        pw.SizedBox(height: 6),
+
+                        // Mulank Friends and Enemies
+                        pw.Text('Mulank ($m) Friends and Enemies:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        buildCheckRow('Friends:', mFriends),
+                        buildCheckRow('Enemies:', mEnemies),
+                        pw.SizedBox(height: 6),
+
+                        // Bhagyank Friends and Enemies
+                        pw.Text('Bhagyank ($b) Friends and Enemies:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        buildCheckRow('Friends:', bFriends),
+                        buildCheckRow('Enemies:', bEnemies),
+                        pw.SizedBox(height: 6),
+
+                        // Common Friends
+                        pw.Text('Common Friends Between Mulank and Bhagank:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        buildCheckRow('', commonStr, valColor: PdfColors.teal800),
+
+                        pw.Spacer(),
+                        buildFooter(),
+                      ],
+                    );
+                  },
                 ),
               );
 
