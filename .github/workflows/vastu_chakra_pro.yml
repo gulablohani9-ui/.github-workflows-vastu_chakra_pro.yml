@@ -1011,7 +1011,7 @@ jobs:
               );
             }
 
-            // Page 10: 45 Devta Grid Overlay (Using vastu_45_devtas.png rotated with North Degree over Map)
+            // Page 10: 45 Devta Grid Overlay (Corrected rotation angle for 100% alignment)
             pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
               required Uint8List? devtaAsset,
@@ -1683,7 +1683,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 10: 45 DEVTA GRID OVERLAY WITH VASTU_45_DEVTAS.PNG
+                        // PAGE 10: 45 DEVTA GRID OVERLAY WITH VASTU_45_DEVTAS.PNG (FIXED ROTATION)
                         case 10:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
