@@ -62,7 +62,6 @@ jobs:
           import 'dart:io';
           import 'dart:math' as math;
           import 'dart:typed_data';
-          import 'dart:ui' as ui;
           import 'package:flutter/material.dart';
           import 'package:flutter/services.dart' show rootBundle;
           import 'package:image_picker/image_picker.dart';
@@ -95,31 +94,6 @@ jobs:
               );
             }
           }
-
-          class CityData {
-            final String name;
-            final double lat;
-            final double lng;
-            const CityData(this.name, this.lat, this.lng);
-          }
-
-          const List<CityData> kIndianCities = [
-            CityData("Jalor, Rajasthan, India", 25.3444, 72.6156),
-            CityData("Jodhpur, Rajasthan, India", 26.2389, 73.0243),
-            CityData("Jaipur, Rajasthan, India", 26.9124, 75.7873),
-            CityData("Udaipur, Rajasthan, India", 24.5854, 73.7125),
-            CityData("Bikaner, Rajasthan, India", 28.0229, 73.3119),
-            CityData("Ajmer, Rajasthan, India", 26.4499, 74.6399),
-            CityData("Kota, Rajasthan, India", 25.2138, 75.8648),
-            CityData("Pali, Rajasthan, India", 25.7711, 73.3234),
-            CityData("Barmer, Rajasthan, India", 25.7521, 71.3967),
-            CityData("Sirohi, Rajasthan, India", 24.8826, 72.8589),
-            CityData("Nagaur, Rajasthan, India", 27.2070, 73.7423),
-            CityData("Ahmedabad, Gujarat, India", 23.0225, 72.5714),
-            CityData("Delhi, India", 28.7041, 77.1025),
-            CityData("Mumbai, Maharashtra, India", 19.0760, 72.8777),
-            CityData("Kolkata, West Bengal, India", 22.5726, 88.3639),
-          ];
 
           class PersonProfile {
             String role;
@@ -328,18 +302,13 @@ jobs:
             final MasterClientData client = MasterClientData();
             File? mapImage;
             Uint8List? mapImageBytes;
-            List<Offset> plotPoints = [];
             int currentTab = 0;
 
             @override
             Widget build(BuildContext context) {
               final screens = [
                 ClientInputScreen(client: client, onUpdate: () => setState(() {})),
-                PdfReportPreviewScreen(
-                  client: client,
-                  mapImageBytes: mapImageBytes,
-                  points: plotPoints,
-                ),
+                PdfReportPreviewScreen(client: client, mapImageBytes: mapImageBytes),
               ];
 
               return Scaffold(
@@ -427,13 +396,11 @@ jobs:
           class PdfReportPreviewScreen extends StatelessWidget {
             final MasterClientData client;
             final Uint8List? mapImageBytes;
-            final List<Offset> points;
 
             const PdfReportPreviewScreen({
               super.key,
               required this.client,
               required this.mapImageBytes,
-              required this.points,
             });
 
             Future<Uint8List?> _loadAssetBytes(String path) async {
@@ -689,8 +656,6 @@ jobs:
             Future<Uint8List> generateFullReport(PdfPageFormat format) async {
               final pdf = pw.Document();
 
-              // Load all 7 PNG assets directly from assets/images/
-              final astroKpChakra = await _loadAssetBytes('assets/images/astro_kp_chakra.png');
               final avoidColorsFrame = await _loadAssetBytes('assets/images/avoid_colors_frame.png');
               final circularKundliWheel = await _loadAssetBytes('assets/images/circular_kundli_wheel.png');
               final recommendedColorsFrame = await _loadAssetBytes('assets/images/recommended_colors_frame.png');
@@ -698,7 +663,6 @@ jobs:
               final vastu32Padas = await _loadAssetBytes('assets/images/vastu_32_padas.png');
               final vastu45Devtas = await _loadAssetBytes('assets/images/vastu_45_devtas.png');
 
-              // Exact 37 Pages matching Vastu-Evaluation-Report-download.pdf
               for (int pNum = 1; pNum <= 37; pNum++) {
                 pdf.addPage(
                   pw.Page(
@@ -728,7 +692,7 @@ jobs:
                                   children: [
                                     pw.Text('CLIENT NAME: ${client.owner.name.toUpperCase()}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 11)),
                                     pw.Text('ADDRESS: ${client.address}', style: const pw.TextStyle(fontSize: 9.5)),
-                                    pw.Text('REG NO: ${client.regNo}    DATE: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9.5)),
+                                    pw.Text('REG NO: ${client.regNo}    DATE: ${DateFormat("dd/MM/yyyy").format(DateTime.now())}', style: const pw.TextStyle(fontSize: 9.5)),
                                     pw.SizedBox(height: 4),
                                     pw.Row(
                                       children: [
@@ -890,7 +854,7 @@ jobs:
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               buildHeader('GLOHANI VASTU® DASHA-DISHA COMBINATIONS (OWNER)'),
-                              pw.Text('Name: ${client.owner.name.toUpperCase()} (owner) | D.O.B: ${DateFormat('dd-MM-yyyy').format(client.owner.dob)}, Age: ${client.owner.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                              pw.Text('Name: ${client.owner.name.toUpperCase()} (owner) | D.O.B: ${DateFormat("dd-MM-yyyy").format(client.owner.dob)}, Age: ${client.owner.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
                               pw.SizedBox(height: 6),
                               pw.Row(
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -939,7 +903,7 @@ jobs:
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               buildHeader('GLOHANI VASTU® DASHA-DISHA COMBINATIONS (WIFE)'),
-                              pw.Text('Name: ${client.wife.name.toUpperCase()} (wife) | D.O.B: ${DateFormat('dd-MM-yyyy').format(client.wife.dob)}, Age: ${client.wife.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
+                              pw.Text('Name: ${client.wife.name.toUpperCase()} (wife) | D.O.B: ${DateFormat("dd-MM-yyyy").format(client.wife.dob)}, Age: ${client.wife.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9)),
                               pw.SizedBox(height: 6),
                               pw.Row(
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1290,7 +1254,6 @@ jobs:
                             ],
                           );
 
-                        // PERSON 1: OWNER (PAGES 21 - 25)
                         case 21:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1305,7 +1268,7 @@ jobs:
                                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                                       children: [
                                         pw.Text('Name: ${client.owner.name.toUpperCase()} (owner)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat('dd-MM-yyyy').format(client.owner.dob)}, Age: ${client.owner.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.owner.dob)}, Age: ${client.owner.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                                         pw.Text('TIME: ${client.owner.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
                                       ],
                                     ),
@@ -1391,16 +1354,16 @@ jobs:
                               pw.Table.fromTextArray(
                                 headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
                                 data: [
-                                  ['Lagna', "24° Leo 32' 52"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Mercury', "144° 32' 52""],
-                                  ['Sun', "21° Leo 1' 8"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "141° 1' 8""],
-                                  ['Moon', "5° Cancer 42' 33"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 42' 33""],
-                                  ['Mercury', "16° Virgo 10' 16"", 'Mercury (Me)', 'Hasta', 'Moon (Mo)', 'Saturn', "166° 10' 16""],
-                                  ['Venus', "5° Cancer 55' 24"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 55' 24""],
-                                  ['Mars®', "16° Pisces 56' 42"", 'Jupiter (Ju)', 'Revati', 'Mercury (Me)', 'Mercury', "346° 56' 42""],
-                                  ['Jupiter', "12° Taurus 1' 10"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "42° 1' 10""],
-                                  ['Saturn', "2° Sagittarius 22' 21"", 'Jupiter (Ju)', 'Mula', 'Ketu (Ke)', 'Venus', "242° 22' 21""],
-                                  ['Rahu', "20° Aquarius 29' 49"", 'Saturn (Sa)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Jupiter', "320° 29' 49""],
-                                  ['Ketu®', "20° Leo 29' 49"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "140° 29' 49""],
+                                  ['Lagna', "24° Leo 32' 52\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Mercury', "144° 32' 52\""],
+                                  ['Sun', "21° Leo 1' 8\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "141° 1' 8\""],
+                                  ['Moon', "5° Cancer 42' 33\"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 42' 33\""],
+                                  ['Mercury', "16° Virgo 10' 16\"", 'Mercury (Me)', 'Hasta', 'Moon (Mo)', 'Saturn', "166° 10' 16\""],
+                                  ['Venus', "5° Cancer 55' 24\"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 55' 24\""],
+                                  ['Mars®', "16° Pisces 56' 42\"", 'Jupiter (Ju)', 'Revati', 'Mercury (Me)', 'Mercury', "346° 56' 42\""],
+                                  ['Jupiter', "12° Taurus 1' 10\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "42° 1' 10\""],
+                                  ['Saturn', "2° Sagittarius 22' 21\"", 'Jupiter (Ju)', 'Mula', 'Ketu (Ke)', 'Venus', "242° 22' 21\""],
+                                  ['Rahu', "20° Aquarius 29' 49\"", 'Saturn (Sa)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Jupiter', "320° 29' 49\""],
+                                  ['Ketu®', "20° Leo 29' 49\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "140° 29' 49\""],
                                 ],
                                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
                                 headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
@@ -1523,7 +1486,6 @@ jobs:
                         case 25:
                           return buildNumerologyReportPage(client.owner);
 
-                        // PERSON 2: WIFE (PAGES 26 - 30)
                         case 26:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1538,7 +1500,7 @@ jobs:
                                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                                       children: [
                                         pw.Text('Name: ${client.wife.name.toUpperCase()} (wife)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat('dd-MM-yyyy').format(client.wife.dob)}, Age: ${client.wife.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.wife.dob)}, Age: ${client.wife.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                                         pw.Text('TIME: ${client.wife.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
                                       ],
                                     ),
@@ -1624,16 +1586,16 @@ jobs:
                               pw.Table.fromTextArray(
                                 headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
                                 data: [
-                                  ['Lagna', "28° Cancer 39' 15"", 'Moon (Mo)', 'Ashlesha', 'Mercury (Me)', 'Saturn', "118° 39' 15""],
-                                  ['Sun', "3° Aries 42' 19"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Moon', "3° 42' 19""],
-                                  ['Moon', "22° Leo 44' 16"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Saturn', "142° 44' 16""],
-                                  ['Mercury', "17° Aries 20' 7"", 'Mars (Ma)', 'Bharani', 'Venus (Ve)', 'Mars', "17° 20' 7""],
-                                  ['Venus', "6° Aries 53' 47"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Rahu', "6° 53' 47""],
-                                  ['Mars', "29° Taurus 5' 0"", 'Venus (Ve)', 'Mrigashira', 'Mars (Ma)', 'Saturn', "59° 5' 0""],
-                                  ['Jupiter', "13° Taurus 2' 47"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "43° 2' 47""],
-                                  ['Saturn', "20° Sagittarius 17' 21"", 'Jupiter (Ju)', 'Purva Ashadha', 'Venus (Ve)', 'Jupiter', "260° 17' 21""],
-                                  ['Rahu®', "10° Aquarius 6' 45"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Jupiter', "310° 6' 45""],
-                                  ['Ketu®', "10° Leo 6' 45"", 'Sun (Su)', 'Magha', 'Ketu (Ke)', 'Saturn', "130° 6' 45""],
+                                  ['Lagna', "28° Cancer 39' 15\"", 'Moon (Mo)', 'Ashlesha', 'Mercury (Me)', 'Saturn', "118° 39' 15\""],
+                                  ['Sun', "3° Aries 42' 19\"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Moon', "3° 42' 19\""],
+                                  ['Moon', "22° Leo 44' 16\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Saturn', "142° 44' 16\""],
+                                  ['Mercury', "17° Aries 20' 7\"", 'Mars (Ma)', 'Bharani', 'Venus (Ve)', 'Mars', "17° 20' 7\""],
+                                  ['Venus', "6° Aries 53' 47\"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Rahu', "6° 53' 47\""],
+                                  ['Mars', "29° Taurus 5' 0\"", 'Venus (Ve)', 'Mrigashira', 'Mars (Ma)', 'Saturn', "59° 5' 0\""],
+                                  ['Jupiter', "13° Taurus 2' 47\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "43° 2' 47\""],
+                                  ['Saturn', "20° Sagittarius 17' 21\"", 'Jupiter (Ju)', 'Purva Ashadha', 'Venus (Ve)', 'Jupiter', "260° 17' 21\""],
+                                  ['Rahu®', "10° Aquarius 6' 45\"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Jupiter', "310° 6' 45\""],
+                                  ['Ketu®', "10° Leo 6' 45\"", 'Sun (Su)', 'Magha', 'Ketu (Ke)', 'Saturn', "130° 6' 45\""],
                                 ],
                                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
                                 headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
@@ -1741,7 +1703,6 @@ jobs:
                         case 30:
                           return buildNumerologyReportPage(client.wife);
 
-                        // PERSON 3: CHILD (PAGES 31 - 35)
                         case 31:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1756,7 +1717,7 @@ jobs:
                                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                                       children: [
                                         pw.Text('Name: ${client.child.name.toUpperCase()} (child)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat('dd-MM-yyyy').format(client.child.dob)}, Age: ${client.child.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.child.dob)}, Age: ${client.child.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
                                         pw.Text('TIME: ${client.child.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
                                       ],
                                     ),
@@ -1842,16 +1803,16 @@ jobs:
                               pw.Table.fromTextArray(
                                 headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
                                 data: [
-                                  ['Lagna', "2° Pisces 36' 7"", 'Jupiter (Ju)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Rahu', "332° 36' 7""],
-                                  ['Sun', "11° Aquarius 38' 39"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Saturn', "311° 38' 39""],
-                                  ['Moon', "0° Cancer 30' 12"", 'Moon (Mo)', 'Punarvasu', 'Jupiter (Ju)', 'Moon', "90° 30' 12""],
-                                  ['Mercury', "17° Capricorn 28' 39"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Saturn', "287° 28' 39""],
-                                  ['Venus', "4° Aquarius 8' 13"", 'Saturn (Sa)', 'Dhanishta', 'Mars (Ma)', 'Venus', "304° 8' 13""],
-                                  ['Mars', "1° Taurus 18' 58"", 'Venus (Ve)', 'Krittika', 'Sun (Su)', 'Jupiter', "31° 18' 58""],
-                                  ['Jupiter', "21° Capricorn 26' 13"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Venus', "291° 26' 13""],
-                                  ['Saturn', "13° Capricorn 53' 2"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Rahu', "283° 53' 2""],
-                                  ['Rahu®', "22° Taurus 33' 25"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Venus', "52° 33' 25""],
-                                  ['Ketu®', "22° Scorpio 33' 25"", 'Mars (Ma)', 'Jyeshtha', 'Mercury (Me)', 'Moon', "232° 33' 25""],
+                                  ['Lagna', "2° Pisces 36' 7\"", 'Jupiter (Ju)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Rahu', "332° 36' 7\""],
+                                  ['Sun', "11° Aquarius 38' 39\"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Saturn', "311° 38' 39\""],
+                                  ['Moon', "0° Cancer 30' 12\"", 'Moon (Mo)', 'Punarvasu', 'Jupiter (Ju)', 'Moon', "90° 30' 12\""],
+                                  ['Mercury', "17° Capricorn 28' 39\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Saturn', "287° 28' 39\""],
+                                  ['Venus', "4° Aquarius 8' 13\"", 'Saturn (Sa)', 'Dhanishta', 'Mars (Ma)', 'Venus', "304° 8' 13\""],
+                                  ['Mars', "1° Taurus 18' 58\"", 'Venus (Ve)', 'Krittika', 'Sun (Su)', 'Jupiter', "31° 18' 58\""],
+                                  ['Jupiter', "21° Capricorn 26' 13\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Venus', "291° 26' 13\""],
+                                  ['Saturn', "13° Capricorn 53' 2\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Rahu', "283° 53' 2\""],
+                                  ['Rahu®', "22° Taurus 33' 25\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Venus', "52° 33' 25\""],
+                                  ['Ketu®', "22° Scorpio 33' 25\"", 'Mars (Ma)', 'Jyeshtha', 'Mercury (Me)', 'Moon', "232° 33' 25\""],
                                 ],
                                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
                                 headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
@@ -2006,10 +1967,8 @@ jobs:
                               pw.SizedBox(height: 16),
                               pw.Text('OUR KEY PROFESSIONALS:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.teal)),
                               pw.SizedBox(height: 6),
-                              pw.Bullet(text: 'APURBA DAS (Prof. Astro-Vastu Consultant, Trainer & Civil Engineer)
-Founder of AppliedVastu & AppliedJyotish'),
-                              pw.Bullet(text: 'SHOUVIK DAS (Prof. Astro-Vastu Consultant, Trainer & Civil Engineer)
-Co-Founder of AppliedVastu & AppliedJyotish'),
+                              pw.Bullet(text: 'APURBA DAS (Prof. Astro-Vastu Consultant, Trainer & Civil Engineer)\nFounder of AppliedVastu & AppliedJyotish'),
+                              pw.Bullet(text: 'SHOUVIK DAS (Prof. Astro-Vastu Consultant, Trainer & Civil Engineer)\nCo-Founder of AppliedVastu & AppliedJyotish'),
                               pw.Spacer(),
                               buildFooter(),
                             ],
@@ -2048,8 +2007,7 @@ Co-Founder of AppliedVastu & AppliedJyotish'),
                                 ),
                               ),
                               pw.SizedBox(height: 20),
-                              pw.Text('Glohani Vastu Center, Budherhat Rd, Kolkata-700094
-Phone: +91-8777614891 | Email: info@glohanivastu.com', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
+                              pw.Text('Glohani Vastu Center, Budherhat Rd, Kolkata-700094\nPhone: +91-8777614891 | Email: info@glohanivastu.com', textAlign: pw.TextAlign.center, style: const pw.TextStyle(fontSize: 8.5, color: PdfColors.grey800)),
                             ],
                           );
 
