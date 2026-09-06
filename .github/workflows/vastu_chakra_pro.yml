@@ -430,6 +430,78 @@ jobs:
             }
           }
 
+          // GLOBAL TOP-LEVEL EXCEL ENGINE (FIXES SCOPE ERROR)
+          Map<String, dynamic> calculateExcelZonalStrength(double width, double length, double northDeg, Map<String, double> manualMap) {
+            double w = width / 2.0;
+            double l = length / 2.0;
+            double wl2 = w * l / 2.0;
+            double a = (w * w) / 2.0;
+            double b = (l * l) / 2.0;
+            double diag = math.atan(l / w) * 180.0 / math.pi;
+
+            final zonesOrder = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+            Map<String, double> areas = {};
+
+            double currD = northDeg + 11.25;
+
+            for (String z in zonesOrder) {
+              if (manualMap.containsKey(z)) {
+                areas[z] = manualMap[z]!;
+                continue;
+              }
+
+              double d = currD % 360.0;
+              if (d < 0) d += 360.0;
+              double e = (d - 22.5) % 360.0;
+              if (e < 0) e += 360.0;
+
+              bool c1 = ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) ||
+                  ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0));
+
+              bool c2 = ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) ||
+                  ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag)));
+
+              bool c3 = (e <= diag && d >= diag && d < 90.0) ||
+                  (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0);
+
+              bool c4 = (e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) ||
+                  (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0);
+
+              double dRad = d * math.pi / 180.0;
+              double eRad = e * math.pi / 180.0;
+
+              double mVal = a * math.tan(dRad) - a * math.tan(eRad);
+              double nVal = b * math.tan((d - 90.0) * math.pi / 180.0) + b * math.tan((90.0 - e) * math.pi / 180.0);
+              double oVal = wl2 - a * math.tan(eRad) + wl2 - b * math.tan((90.0 - d) * math.pi / 180.0);
+              double pVal = wl2 - a * math.tan((180.0 - d) * math.pi / 180.0) + wl2 - b * math.tan((e - 90.0) * math.pi / 180.0);
+
+              double areaVal = wl2;
+              if (c1) areaVal = mVal.abs();
+              else if (c2) areaVal = nVal.abs();
+              else if (c3) areaVal = oVal.abs();
+              else if (c4) areaVal = pVal.abs();
+
+              areas[z] = areaVal;
+              currD = e;
+            }
+
+            double sumArea = areas.values.reduce((v1, v2) => v1 + v2);
+            double balance = sumArea / 16.0;
+            double maxVal = areas.values.reduce(math.max);
+            double minVal = areas.values.reduce(math.min);
+
+            double upperBal = (maxVal - balance) / 2.0 + balance;
+            double lowerBal = (balance - minVal) / 2.0 + minVal;
+
+            return {
+              'areas': areas,
+              'balance': balance,
+              'upperBal': upperBal,
+              'lowerBal': lowerBal,
+              'zones': zonesOrder,
+            };
+          }
+
           class MainMasterDashboard extends StatefulWidget {
             const MainMasterDashboard({super.key});
 
@@ -996,64 +1068,13 @@ jobs:
           class _ZonalAreaEditorScreenState extends State<ZonalAreaEditorScreen> {
             final zonesOrder = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 
-            Map<String, double> runExcelEngine() {
-              double w = widget.client.plotWidth / 2.0;
-              double l = widget.client.plotLength / 2.0;
-              double wl2 = w * l / 2.0;
-              double a = (w * w) / 2.0;
-              double b = (l * l) / 2.0;
-              double diag = math.atan(l / w) * 180.0 / math.pi;
-
-              Map<String, double> areas = {};
-              double currD = widget.client.northDegree + 11.25;
-
-              for (String z in zonesOrder) {
-                double d = currD % 360.0;
-                if (d < 0) d += 360.0;
-                double e = (d - 22.5) % 360.0;
-                if (e < 0) e += 360.0;
-
-                bool c1 = ((d <= diag || d >= 360.0 - diag) && (e <= diag || e >= 360.0 - diag)) ||
-                    ((d <= (180.0 + diag) % 360.0 && d >= (180.0 - diag) % 360.0) && (e <= (180.0 + diag) % 360.0 && e >= (180.0 - diag) % 360.0));
-
-                bool c2 = ((d <= (180.0 - diag) && d >= diag) && (e <= (180.0 - diag) && e >= diag)) ||
-                    ((d <= (360.0 - diag) && d >= (180.0 + diag)) && (e <= (360.0 - diag) && e >= (180.0 + diag)));
-
-                bool c3 = (e <= diag && d >= diag && d < 90.0) ||
-                    (e <= (180.0 + diag) && e > 180.0 && d >= (180.0 + diag) && d < 270.0);
-
-                bool c4 = (e <= (180.0 - diag) && e > 90.0 && d >= (180.0 - diag) && d < 180.0) ||
-                    (e <= (360.0 - diag) && e > 270.0 && d >= (360.0 - diag) && d < 360.0);
-
-                double dRad = d * math.pi / 180.0;
-                double eRad = e * math.pi / 180.0;
-
-                double mVal = a * math.tan(dRad) - a * math.tan(eRad);
-                double nVal = b * math.tan((d - 90.0) * math.pi / 180.0) + b * math.tan((90.0 - e) * math.pi / 180.0);
-                double oVal = wl2 - a * math.tan(eRad) + wl2 - b * math.tan((90.0 - d) * math.pi / 180.0);
-                double pVal = wl2 - a * math.tan((180.0 - d) * math.pi / 180.0) + wl2 - b * math.tan((e - 90.0) * math.pi / 180.0);
-
-                double areaVal = wl2;
-                if (c1) areaVal = mVal.abs();
-                else if (c2) areaVal = nVal.abs();
-                else if (c3) areaVal = oVal.abs();
-                else if (c4) areaVal = pVal.abs();
-
-                areas[z] = widget.client.manualZonalStrength[z] ?? areaVal;
-                currD = e;
-              }
-              return areas;
-            }
-
             @override
             Widget build(BuildContext context) {
-              final areas = runExcelEngine();
-              double sumArea = areas.values.reduce((a, b) => a + b);
-              double balance = sumArea / 16.0;
-              double maxVal = areas.values.reduce(math.max);
-              double minVal = areas.values.reduce(math.min);
-              double upperBal = (maxVal - balance) / 2.0 + balance;
-              double lowerBal = (balance - minVal) / 2.0 + minVal;
+              final data = calculateExcelZonalStrength(widget.client.plotWidth, widget.client.plotLength, widget.client.northDegree, widget.client.manualZonalStrength);
+              final areas = data['areas'] as Map<String, double>;
+              double balance = data['balance'] as double;
+              double upperBal = data['upperBal'] as double;
+              double lowerBal = data['lowerBal'] as double;
 
               return Scaffold(
                 appBar: AppBar(title: const Text('Plot Size & Zonal Strength Table')),
@@ -1306,7 +1327,6 @@ jobs:
               );
             }
 
-            // EXACT FULL-PAGE 4 "PLAN WITH VASTU CHAKRA" (MATCHES 1000067903.png)
             pw.Widget buildFullPage4VastuChakraPlate({
               required Uint8List? bgMap,
               required Uint8List? chakraBytes,
@@ -1322,7 +1342,6 @@ jobs:
                 child: pw.Column(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    // Top Applied/Glohani Vastu Logo Header
                     pw.Column(
                       children: [
                         if (chakraBytes != null)
@@ -1352,23 +1371,18 @@ jobs:
                         pw.Container(width: 380, height: 1.2, color: PdfColors.red800),
                       ],
                     ),
-
-                    // Main Center Floor Plan with Superimposed Vastu Chakra
                     pw.Container(
                       width: 410,
                       height: 410,
                       child: pw.Stack(
                         alignment: pw.Alignment.center,
                         children: [
-                          // 1. Floor Plan in Center
                           if (bgMap != null)
                             pw.Container(
                               width: 250,
                               height: 250,
                               child: pw.Image(pw.MemoryImage(bgMap), fit: pw.BoxFit.contain),
                             ),
-
-                          // 2. Large 16 Zones & 32 Padas Wheel Overlay (Rotated)
                           if (chakraBytes != null)
                             pw.Transform.rotate(
                               angle: (degree) * (math.pi / 180.0),
@@ -1377,8 +1391,6 @@ jobs:
                                 child: pw.Image(pw.MemoryImage(chakraBytes), width: 395, height: 395, fit: pw.BoxFit.contain),
                               ),
                             ),
-
-                          // 3. Brahmasthan Marker with Small Central Logo
                           pw.Container(
                             width: 20,
                             height: 20,
@@ -1391,8 +1403,6 @@ jobs:
                               child: pw.Text('+', style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
                             ),
                           ),
-
-                          // Center Watermark Label
                           pw.Positioned(
                             bottom: 155,
                             child: pw.Container(
@@ -1416,8 +1426,6 @@ jobs:
                         ],
                       ),
                     ),
-
-                    // Bottom Label as in photo
                     pw.Column(
                       children: [
                         pw.Text(
@@ -2159,7 +2167,7 @@ jobs:
                 ),
               );
 
-              // 4. EXACT FULL-PAGE "PLAN WITH VASTU CHAKRA" (MATCHES PHOTO 1000067903.png)
+              // 4. EXACT FULL-PAGE "PLAN WITH VASTU CHAKRA"
               pdf.addPage(
                 pw.Page(
                   pageFormat: format,
@@ -2290,7 +2298,7 @@ jobs:
                 pw.Page(
                   pageFormat: format,
                   build: (pw.Context ctx) {
-                    final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree);
+                    final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree, client.manualZonalStrength);
                     final Map<String, double> areas = data['areas'];
                     final double balance = data['balance'];
                     final double upperBal = data['upperBal'];
@@ -2909,6 +2917,7 @@ jobs:
                       children: [
                         buildHeader('NUMEROLOGY & LO SHU GRID EVALUATION'),
                         pw.SizedBox(height: 10),
+                        
                         pw.Center(child: buildLoShuExactBox()),
                         pw.SizedBox(height: 12),
 
