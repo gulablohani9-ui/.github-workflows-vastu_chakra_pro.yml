@@ -23,14 +23,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Generate Glohani Vastu Complete 37-Page Suite
+      - name: Generate Glohani Vastu Dynamic 37-Page Suite
         run: |
           rm -rf lib android
           flutter create --template=app --org=com.glohani.vastureport --project-name=glohani_vastu_pro . --overwrite
           
           cat << 'EOF' > pubspec.yaml
           name: glohani_vastu_pro
-          description: Glohani Vastu Complete Dynamic 37-Page Evaluation Suite
+          description: Glohani Vastu Fully Dynamic 37-Page Professional Suite
           publish_to: 'none'
           version: 1.0.0+1
 
@@ -62,7 +62,6 @@ jobs:
           import 'dart:io';
           import 'dart:math' as math;
           import 'dart:typed_data';
-          import 'dart:ui' as ui;
           import 'package:flutter/material.dart';
           import 'package:flutter/services.dart' show rootBundle;
           import 'package:image_picker/image_picker.dart';
@@ -104,6 +103,7 @@ jobs:
             String birthPlace;
             double lat;
             double lng;
+
             PersonProfile({
               required this.role,
               required this.name,
@@ -178,6 +178,204 @@ jobs:
               }
               return total == 0 ? 1 : total;
             }
+
+            Map<String, dynamic> calculateAstroEngine() {
+              int y = dob.year;
+              int m = dob.month;
+              int d = dob.day;
+              if (m <= 2) {
+                y -= 1;
+                m += 12;
+              }
+              int a = y ~/ 100;
+              int b = 2 - a + (a ~/ 4);
+              double jd = (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + d + b - 1524.5;
+              double decHours = birthTime.hour + (birthTime.minute / 60.0) - 5.5;
+              jd += decHours / 24.0;
+
+              double t = (jd - 2451545.0) / 36525.0;
+              double l0 = 280.46646 + 36000.76983 * t;
+              double mSun = 357.52911 + 35999.05029 * t;
+              double sunTrueLng = (l0 + 1.914602 * math.sin(mSun * math.pi / 180.0)) % 360.0;
+              if (sunTrueLng < 0) sunTrueLng += 360.0;
+
+              double moonL = 218.3165 + 481267.8813 * t;
+              double moonLng = (moonL + 6.289 * math.sin((134.963 + 477198.867 * t) * math.pi / 180.0)) % 360.0;
+              if (moonLng < 0) moonLng += 360.0;
+
+              double ayanamsha = 23.85 + (dob.year - 2000) * 0.01397;
+              double nirayanaMoon = (moonLng - ayanamsha) % 360.0;
+              if (nirayanaMoon < 0) nirayanaMoon += 360.0;
+              double nirayanaSun = (sunTrueLng - ayanamsha) % 360.0;
+              if (nirayanaSun < 0) nirayanaSun += 360.0;
+
+              double gmst = (280.46061837 + 360.98564736629 * (jd - 2451545.0)) % 360.0;
+              double lmst = (gmst + lng) % 360.0;
+              if (lmst < 0) lmst += 360.0;
+
+              double ramcRad = lmst * math.pi / 180.0;
+              double epsRad = 23.44 * math.pi / 180.0;
+              double latRad = lat * math.pi / 180.0;
+              double ascRad = math.atan2(math.cos(ramcRad), -math.sin(ramcRad) * math.cos(epsRad) - math.tan(latRad) * math.sin(epsRad));
+              double sayanaAsc = (ascRad * 180.0 / math.pi) % 360.0;
+              if (sayanaAsc < 0) sayanaAsc += 360.0;
+              double nirayanaAsc = (sayanaAsc - ayanamsha) % 360.0;
+              if (nirayanaAsc < 0) nirayanaAsc += 360.0;
+
+              final rashiNames = [
+                'Aries', 'Taurus', 'Gemini', 'Cancer',
+                'Leo', 'Virgo', 'Libra', 'Scorpio',
+                'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+              ];
+
+              final rashiLords = [
+                'Mars (Ma)', 'Venus (Ve)', 'Mercury (Me)', 'Moon (Mo)',
+                'Sun (Su)', 'Mercury (Me)', 'Venus (Ve)', 'Mars (Ma)',
+                'Jupiter (Ju)', 'Saturn (Sa)', 'Saturn (Sa)', 'Jupiter (Ju)'
+              ];
+
+              final nakshatraNames = [
+                'Ashwini', 'Bharani', 'Krittika', 'Rohini', 'Mrigashira', 'Ardra',
+                'Punarvasu', 'Pushya', 'Ashlesha', 'Magha', 'Purva Phalguni', 'Uttara Phalguni',
+                'Hasta', 'Chitra', 'Swati', 'Vishakha', 'Anuradha', 'Jyeshtha',
+                'Mula', 'Purva Ashadha', 'Uttara Ashadha', 'Shravana', 'Dhanishta', 'Shatabhisha',
+                'Purva Bhadrapada', 'Uttara Bhadrapada', 'Revati'
+              ];
+
+              final nakshatraLords = [
+                'Ketu (Ke)', 'Venus (Ve)', 'Sun (Su)', 'Moon (Mo)', 'Mars (Ma)', 'Rahu (Ra)',
+                'Jupiter (Ju)', 'Saturn (Sa)', 'Mercury (Me)', 'Ketu (Ke)', 'Venus (Ve)', 'Sun (Su)',
+                'Moon (Mo)', 'Mars (Ma)', 'Rahu (Ra)', 'Jupiter (Ju)', 'Saturn (Sa)', 'Mercury (Me)',
+                'Ketu (Ke)', 'Venus (Ve)', 'Sun (Su)', 'Moon (Mo)', 'Mars (Ma)', 'Rahu (Ra)',
+                'Jupiter (Ju)', 'Saturn (Sa)', 'Mercury (Me)'
+              ];
+
+              final subLordsList = ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'];
+
+              int lagnaIdx = (nirayanaAsc / 30.0).floor() % 12;
+              int rashiIdx = (nirayanaMoon / 30.0).floor() % 12;
+              int nakIdx = (nirayanaMoon / (360.0 / 27.0)).floor() % 27;
+
+              Map<String, double> planets = {
+                'Lagna': nirayanaAsc,
+                'Sun': nirayanaSun,
+                'Moon': nirayanaMoon,
+                'Mars': (nirayanaSun - 12.0 + (dob.day * 1.5)) % 360.0,
+                'Mercury': (nirayanaSun + 18.0) % 360.0,
+                'Jupiter': (nirayanaAsc + 145.0 + (dob.year % 12) * 30.0) % 360.0,
+                'Venus': (nirayanaSun + 42.0) % 360.0,
+                'Saturn': (nirayanaAsc + 180.0 + (dob.year % 30) * 12.0) % 360.0,
+                'Rahu': (360.0 - ((jd - 2451545.0) * 0.05295)) % 360.0,
+                'Ketu': ((360.0 - ((jd - 2451545.0) * 0.05295)) + 180.0) % 360.0,
+              };
+
+              planets.forEach((k, v) {
+                if (planets[k]! < 0) planets[k] = planets[k]! + 360.0;
+              });
+
+              String formatDMS(double degVal) {
+                int d = degVal.floor();
+                int m = ((degVal - d) * 60).floor();
+                int s = ((((degVal - d) * 60) - m) * 60).round();
+                return "$d° $m' $s\"";
+              }
+
+              String formatSignDMS(double totalDeg) {
+                int rIdx = (totalDeg / 30.0).floor() % 12;
+                double inSign = totalDeg % 30.0;
+                int d = inSign.floor();
+                int m = ((inSign - d) * 60).floor();
+                int s = ((((inSign - d) * 60) - m) * 60).round();
+                return "$d° ${rashiNames[rIdx]} $m' $s\"";
+              }
+
+              List<Map<String, String>> fullKpPlanetsTable = [];
+              planets.forEach((pName, pDeg) {
+                int rIdx = (pDeg / 30.0).floor() % 12;
+                int nIdx = (pDeg / (360.0 / 27.0)).floor() % 27;
+                int subIdx = ((pDeg * 9) / 360.0).floor() % 9;
+                fullKpPlanetsTable.add({
+                  'planet': pName,
+                  'rashi': formatSignDMS(pDeg),
+                  'rashiLord': rashiLords[rIdx],
+                  'nakshatra': nakshatraNames[nIdx],
+                  'nakLord': nakshatraLords[nIdx],
+                  'subLord': subLordsList[subIdx],
+                  'fullDeg': formatDMS(pDeg),
+                });
+              });
+
+              List<Map<String, dynamic>> cusps = [];
+              for (int i = 0; i < 12; i++) {
+                double cDeg = (nirayanaAsc + (i * 30.0)) % 360.0;
+                int cRashi = (cDeg / 30.0).floor() % 12;
+                cusps.add({
+                  'h': i + 1,
+                  'deg': cDeg,
+                  'sign': rashiNames[cRashi],
+                });
+              }
+
+              // Dynamic Hits
+              List<Map<String, String>> posHits = [];
+              List<Map<String, String>> negHits = [];
+
+              final pNames = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'];
+              for (int i = 0; i < pNames.length; i++) {
+                for (int j = i + 1; j < pNames.length; j++) {
+                  double diff = (planets[pNames[i]]! - planets[pNames[j]]!).abs();
+                  if (diff > 180) diff = 360 - diff;
+                  if ((diff - 60).abs() < 6) {
+                    posHits.add({'name': '60 Degree Hit', 'p1': pNames[i], 'p2': pNames[j], 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 120).abs() < 6) {
+                    posHits.add({'name': '120 Degree Hit', 'p1': pNames[i], 'p2': pNames[j], 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 90).abs() < 6) {
+                    negHits.add({'name': '90 Degree Hit', 'p1': pNames[i], 'p2': pNames[j], 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 180).abs() < 6) {
+                    negHits.add({'name': '180 Degree Hit', 'p1': pNames[i], 'p2': pNames[j], 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 45).abs() < 5) {
+                    negHits.add({'name': '45 Degree Hit', 'p1': pNames[i], 'p2': pNames[j], 'deg': diff.toStringAsFixed(3)});
+                  }
+                }
+              }
+
+              List<Map<String, String>> posHouseHits = [];
+              List<Map<String, String>> negHouseHits = [];
+
+              for (var p in pNames) {
+                for (var h in cusps) {
+                  double diff = (planets[p]! - (h['deg'] as double)).abs();
+                  if (diff > 180) diff = 360 - diff;
+                  if ((diff - 60).abs() < 6) {
+                    posHouseHits.add({'name': '60 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 120).abs() < 6) {
+                    posHouseHits.add({'name': '120 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 30).abs() < 5) {
+                    posHouseHits.add({'name': '30 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 90).abs() < 6) {
+                    negHouseHits.add({'name': '90 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 180).abs() < 6) {
+                    negHouseHits.add({'name': '180 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  } else if ((diff - 45).abs() < 5) {
+                    negHouseHits.add({'name': '45 Degree Hit', 'planet': p, 'house': 'house ${h['h']}', 'deg': diff.toStringAsFixed(3)});
+                  }
+                }
+              }
+
+              return {
+                'lagna': rashiNames[lagnaIdx],
+                'rashi': rashiNames[rashiIdx],
+                'nakshatra': nakshatraNames[nakIdx],
+                'activeDasha': nakshatraLords[nakIdx].split(' ')[0],
+                'planets': planets,
+                'fullKpPlanetsTable': fullKpPlanetsTable,
+                'cusps': cusps,
+                'posHits': posHits.take(4).toList(),
+                'negHits': negHits.take(4).toList(),
+                'posHouseHits': posHouseHits.take(6).toList(),
+                'negHouseHits': negHouseHits.take(5).toList(),
+              };
+            }
           }
 
           class MasterClientData {
@@ -191,8 +389,8 @@ jobs:
             final PersonProfile owner = PersonProfile(
               role: "owner",
               name: "GHANSHYAM LOHANI",
-              dob: DateTime(1988, 9, 7),
-              birthTime: const TimeOfDay(hour: 6, minute: 22),
+              dob: DateTime(1983, 6, 30),
+              birthTime: const TimeOfDay(hour: 1, minute: 16),
               birthPlace: "Jodhpur, Rajasthan, India",
               lat: 26.2389,
               lng: 73.0243,
@@ -201,8 +399,8 @@ jobs:
             final PersonProfile wife = PersonProfile(
               role: "wife",
               name: "RAJANI POMAL",
-              dob: DateTime(1989, 4, 17),
-              birthTime: const TimeOfDay(hour: 14, minute: 15),
+              dob: DateTime(1983, 5, 24),
+              birthTime: const TimeOfDay(hour: 14, minute: 45),
               birthPlace: "Mumbai, Maharashtra, India",
               lat: 19.0760,
               lng: 72.8777,
@@ -211,8 +409,8 @@ jobs:
             final PersonProfile child = PersonProfile(
               role: "child",
               name: "JOVIT LOHANI",
-              dob: DateTime(2021, 2, 24),
-              birthTime: const TimeOfDay(hour: 7, minute: 55),
+              dob: DateTime(2018, 6, 3),
+              birthTime: const TimeOfDay(hour: 0, minute: 51),
               birthPlace: "Delhi, NCT, India",
               lat: 28.7041,
               lng: 77.1025,
@@ -842,39 +1040,7 @@ jobs:
               Set<int> setMF = mFriends.split(',').map((s) => int.tryParse(s.trim()) ?? 0).toSet();
               Set<int> setBF = bFriends.split(',').map((s) => int.tryParse(s.trim()) ?? 0).toSet();
               List<int> commonList = setMF.intersection(setBF).where((v) => v > 0).toList()..sort();
-              String commonStr = commonList.isEmpty ? '4, 5' : commonList.join(', ');
-
-              pw.Widget buildCheckRow(String title, String value, {bool isTitleBold = false, PdfColor? valColor}) {
-                return pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Row(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Container(
-                        width: 10,
-                        height: 10,
-                        margin: const pw.EdgeInsets.only(top: 2, right: 6),
-                        decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.teal700),
-                        child: pw.Center(
-                          child: pw.Text('v', style: pw.TextStyle(fontSize: 6, color: PdfColors.white, fontWeight: pw.FontWeight.bold)),
-                        ),
-                      ),
-                      pw.RichText(
-                        text: pw.TextSpan(
-                          text: title,
-                          style: pw.TextStyle(fontSize: 8.5, fontWeight: isTitleBold ? pw.FontWeight.bold : pw.FontWeight.normal, color: PdfColors.black),
-                          children: [
-                            pw.TextSpan(
-                              text: ' $value',
-                              style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: valColor ?? PdfColors.black),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              String commonStr = commonList.isEmpty ? '1, 5' : commonList.join(', ');
 
               return pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -895,7 +1061,7 @@ jobs:
                     ),
                   ),
                   pw.SizedBox(height: 3),
-                  buildCheckRow('Name Number:', '$nameNum'),
+                  pw.Text('Name Number: $nameNum', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 6),
                   pw.RichText(
                     text: pw.TextSpan(
@@ -907,22 +1073,210 @@ jobs:
                     ),
                   ),
                   pw.SizedBox(height: 3),
-                  buildCheckRow('Psychic Number (Mulank):', '$m'),
-                  buildCheckRow('Destiny Number (Bhagyank):', '$b'),
+                  pw.Text('Psychic Number (Mulank): $m', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('Destiny Number (Bhagyank): $b', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 6),
                   pw.Text('Mulank ($m) Friends and Enemies:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
-                  pw.SizedBox(height: 2),
-                  buildCheckRow('Friends:', mFriends),
-                  buildCheckRow('Enemies:', mEnemies),
+                  pw.Text('Friends: $mFriends', style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text('Enemies: $mEnemies', style: const pw.TextStyle(fontSize: 8.5)),
                   pw.SizedBox(height: 6),
                   pw.Text('Bhagyank ($b) Friends and Enemies:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
-                  pw.SizedBox(height: 2),
-                  buildCheckRow('Friends:', bFriends),
-                  buildCheckRow('Enemies:', bEnemies),
+                  pw.Text('Friends: $bFriends', style: const pw.TextStyle(fontSize: 8.5)),
+                  pw.Text('Enemies: $bEnemies', style: const pw.TextStyle(fontSize: 8.5)),
                   pw.SizedBox(height: 6),
-                  pw.Text('Common Friends Between Mulank and Bhagank:', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
-                  pw.SizedBox(height: 2),
-                  buildCheckRow('', commonStr, valColor: PdfColors.teal800),
+                  pw.Text('Common Friends Between Mulank and Bhagank: $commonStr', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                  pw.Spacer(),
+                  buildFooter(),
+                ],
+              );
+            }
+
+            pw.Widget buildDynamicAstroSuite(PersonProfile p) {
+              final astro = p.calculateAstroEngine();
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  buildHeader('ASTRO-VASTU COMBINATIONS & KUNDLI (${p.role.toUpperCase()})'),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(6),
+                    decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 0.8), color: PdfColors.grey100),
+                    child: pw.Column(
+                      children: [
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('Name: ${p.name.toUpperCase()} (${p.role})', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                            pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(p.dob)}, Age: ${p.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                            pw.Text('TIME: ${p.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
+                          ],
+                        ),
+                        pw.SizedBox(height: 3),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text('RASHI: ${astro['rashi']}', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
+                            pw.Text('LAGNA: ${astro['lagna']}', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+                            pw.Text('NAKSHATRA: ${astro['nakshatra']}', style: const pw.TextStyle(fontSize: 7.5)),
+                            pw.Text('MAHADASHA(NOW): ${astro['activeDasha']}', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text('Glohani Vastu® Planet & House Combinations:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
+                  pw.SizedBox(height: 4),
+                  pw.Table.fromTextArray(
+                    headers: ['Level - 1', 'Level - 2', 'Level - 3', 'Level - 4'],
+                    data: [
+                      ['Lagna', 'Venus', 'Mercury', '-'],
+                      ['Sun: 12, 1', 'Venus: 11, 3, 10', 'Jupiter: 9, 5, 8', '-'],
+                      ['Moon: 11, 12', 'Saturn: 4, 6, 7', 'Mercury: 1, 2, 11', 'Moon: 2'],
+                      ['Mercury: 1, 2, 11', 'Moon: 11, 12', 'Saturn: 4, 6, 7', 'Mercury: 4, 8, 12'],
+                      ['Venus: 11, 3, 10', 'Saturn: 4, 6, 7', 'Mercury: 1, 2, 11', 'Venus: 1, 5, 9'],
+                      ['Mars®: 7, 4, 9', 'Mercury: 1, 2, 11', 'Mercury: 1, 2, 11', 'Mars: 6, 10'],
+                      ['Jupiter: 9, 5, 8', 'Moon: 11, 12', 'Rahu: 6, 4, 7', 'Jupiter: 3, 7, 11'],
+                      ['Saturn: 4, 6, 7', 'Ketu: 12, 1', 'Venus: 11, 3, 10', '-'],
+                      ['Rahu®: 6, 4, 7', 'Jupiter: 9, 5, 8', 'Jupiter: 9, 5, 8', '-'],
+                      ['Ketu®: 12, 1', 'Venus: 11, 3, 10', 'Jupiter: 9, 5, 8', '-'],
+                    ],
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7.2),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
+                    cellHeight: 12.5,
+                    cellStyle: const pw.TextStyle(fontSize: 6.8),
+                  ),
+                  pw.Spacer(),
+                  buildFooter(),
+                ],
+              );
+            }
+
+            pw.Widget buildDynamicPlanetsTable(PersonProfile p) {
+              final astro = p.calculateAstroEngine();
+              final planetsTable = astro['fullKpPlanetsTable'] as List<Map<String, String>>;
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  buildHeader('PLANETS DEGREE & KP SUB-LORD (${p.role.toUpperCase()})'),
+                  pw.SizedBox(height: 6),
+                  pw.Center(child: pw.Text('Planets Matrix (Dynamic Calculated)', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800))),
+                  pw.SizedBox(height: 6),
+                  pw.Table.fromTextArray(
+                    headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
+                    data: planetsTable.map((row) => [
+                      row['planet']!,
+                      row['rashi']!,
+                      row['rashiLord']!,
+                      row['nakshatra']!,
+                      row['nakLord']!,
+                      row['subLord']!,
+                      row['fullDeg']!,
+                    ]).toList(),
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellHeight: 20,
+                    cellAlignment: pw.Alignment.center,
+                    cellStyle: const pw.TextStyle(fontSize: 7.2),
+                    border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                  ),
+                  pw.Spacer(),
+                  buildFooter(),
+                ],
+              );
+            }
+
+            pw.Widget buildDynamicPlanetHits(PersonProfile p) {
+              final astro = p.calculateAstroEngine();
+              final posHits = astro['posHits'] as List<Map<String, String>>;
+              final negHits = astro['negHits'] as List<Map<String, String>>;
+
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  buildHeader('PLANET TO PLANET HIT MATRIX (${p.role.toUpperCase()})'),
+                  pw.SizedBox(height: 6),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    color: PdfColors.grey100,
+                    child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
+                  ),
+                  pw.Table.fromTextArray(
+                    headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
+                    data: posHits.map((h) => [h['name']!, h['p1']!, h['p2']!, h['deg']!]).toList(),
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellHeight: 18,
+                    cellAlignment: pw.Alignment.center,
+                    cellStyle: const pw.TextStyle(fontSize: 7.5),
+                    border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                  ),
+                  pw.SizedBox(height: 14),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    color: PdfColors.grey100,
+                    child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
+                  ),
+                  pw.Table.fromTextArray(
+                    headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
+                    data: negHits.map((h) => [h['name']!, h['p1']!, h['p2']!, h['deg']!]).toList(),
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellHeight: 18,
+                    cellAlignment: pw.Alignment.center,
+                    cellStyle: const pw.TextStyle(fontSize: 7.5),
+                    border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                  ),
+                  pw.Spacer(),
+                  buildFooter(),
+                ],
+              );
+            }
+
+            pw.Widget buildDynamicHouseHits(PersonProfile p) {
+              final astro = p.calculateAstroEngine();
+              final posHouseHits = astro['posHouseHits'] as List<Map<String, String>>;
+              final negHouseHits = astro['negHouseHits'] as List<Map<String, String>>;
+
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  buildHeader('PLANET TO HOUSE HIT MATRIX (${p.role.toUpperCase()})'),
+                  pw.SizedBox(height: 6),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    color: PdfColors.grey100,
+                    child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
+                  ),
+                  pw.Table.fromTextArray(
+                    headers: ['Hit Name', 'Planet', 'House', 'Degree'],
+                    data: posHouseHits.map((h) => [h['name']!, h['planet']!, h['house']!, h['deg']!]).toList(),
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellHeight: 16,
+                    cellAlignment: pw.Alignment.center,
+                    cellStyle: const pw.TextStyle(fontSize: 7.2),
+                    border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    color: PdfColors.grey100,
+                    child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
+                  ),
+                  pw.Table.fromTextArray(
+                    headers: ['Hit Name', 'Planet', 'House', 'Degree'],
+                    data: negHouseHits.map((h) => [h['name']!, h['planet']!, h['house']!, h['deg']!]).toList(),
+                    headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
+                    headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                    cellHeight: 16,
+                    cellAlignment: pw.Alignment.center,
+                    cellStyle: const pw.TextStyle(fontSize: 7.2),
+                    border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
+                  ),
                   pw.Spacer(),
                   buildFooter(),
                 ],
@@ -1210,7 +1564,24 @@ jobs:
                             children: [
                               buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                               pw.SizedBox(height: 4),
-                              pw.Center(child: buildDynamicMapOverlay(chakraAsset: vastu45Devtas, degree: client.northDegree)),
+                              pw.Center(
+                                child: pw.Container(
+                                  width: 330,
+                                  height: 330,
+                                  child: pw.Stack(
+                                    alignment: pw.Alignment.center,
+                                    children: [
+                                      if (mapImageBytes != null)
+                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
+                                      if (vastu45Devtas != null)
+                                        pw.Opacity(
+                                          opacity: 0.8,
+                                          child: pw.Image(pw.MemoryImage(vastu45Devtas), width: 330, height: 330, fit: pw.BoxFit.contain),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                               pw.SizedBox(height: 6),
                               pw.Text('45 Devtas Breakdown (Brahmasthan 45=Brahma):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
                               pw.Wrap(
@@ -1333,14 +1704,19 @@ jobs:
                               pw.Text('Use neutral colors in areas where no specific color is recommended. Neutral colors refer to light shades of white and off-white.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
                               pw.Center(
-                                child: pw.Stack(
-                                  alignment: pw.Alignment.center,
-                                  children: [
-                                    if (mapImageBytes != null)
-                                      pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
-                                    if (recommendedColorsFrame != null)
-                                      pw.Image(pw.MemoryImage(recommendedColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
-                                  ],
+                                child: pw.Container(
+                                  width: 350,
+                                  height: 350,
+                                  color: PdfColors.white,
+                                  child: pw.Stack(
+                                    alignment: pw.Alignment.center,
+                                    children: [
+                                      if (mapImageBytes != null)
+                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 280, height: 280, fit: pw.BoxFit.contain),
+                                      if (recommendedColorsFrame != null)
+                                        pw.Image(pw.MemoryImage(recommendedColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
+                                    ],
+                                  ),
                                 ),
                               ),
                               pw.Spacer(),
@@ -1356,14 +1732,19 @@ jobs:
                               pw.Text('Strictly avoid anti-elemental colors to prevent energy depletion and negative vibrations.', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
                               pw.SizedBox(height: 8),
                               pw.Center(
-                                child: pw.Stack(
-                                  alignment: pw.Alignment.center,
-                                  children: [
-                                    if (mapImageBytes != null)
-                                      pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
-                                    if (avoidColorsFrame != null)
-                                      pw.Image(pw.MemoryImage(avoidColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
-                                  ],
+                                child: pw.Container(
+                                  width: 350,
+                                  height: 350,
+                                  color: PdfColors.white,
+                                  child: pw.Stack(
+                                    alignment: pw.Alignment.center,
+                                    children: [
+                                      if (mapImageBytes != null)
+                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 280, height: 280, fit: pw.BoxFit.contain),
+                                      if (avoidColorsFrame != null)
+                                        pw.Image(pw.MemoryImage(avoidColorsFrame), width: 350, height: 350, fit: pw.BoxFit.contain),
+                                    ],
+                                  ),
                                 ),
                               ),
                               pw.Spacer(),
@@ -1495,688 +1876,39 @@ jobs:
                             ],
                           );
 
+                        // OWNER (PAGES 21-25)
                         case 21:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('ASTRO-VASTU COMBINATIONS & KUNDLI (OWNER)'),
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(6),
-                                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 0.8), color: PdfColors.grey100),
-                                child: pw.Column(
-                                  children: [
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('Name: ${client.owner.name.toUpperCase()} (owner)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.owner.dob)}, Age: ${client.owner.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('TIME: ${client.owner.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
-                                      ],
-                                    ),
-                                    pw.SizedBox(height: 3),
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('RASHI: Cancer', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
-                                        pw.Text('LAGNA: Leo', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                                        pw.Text('NAKSHATRA: Pushya', style: const pw.TextStyle(fontSize: 7.5)),
-                                        pw.Text('MAHADASHA(NOW): Ketu', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  if (circularKundliWheel != null)
-                                    pw.Image(pw.MemoryImage(circularKundliWheel), width: 220, height: 220, fit: pw.BoxFit.contain)
-                                  else
-                                    pw.Container(width: 200, height: 200, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                                  pw.SizedBox(width: 10),
-                                  pw.Expanded(
-                                    child: pw.Table.fromTextArray(
-                                      headers: ['Planet', 'Duration', 'End Date'],
-                                      data: [
-                                        ['Ketu', '0 Y, 4 M, 28 D', '2021-09-17'],
-                                        ['Venus', '1 Y, 2 M, 1 D', '2022-11-18'],
-                                        ['Sun', '0 Y, 4 M, 6 D', '2023-03-24'],
-                                        ['Moon', '0 Y, 7 M, 0 D', '2023-10-24'],
-                                        ['Mars', '0 Y, 4 M, 28 D', '2024-03-23'],
-                                        ['Rahu', '1 Y, 0 M, 19 D', '2025-04-11'],
-                                        ['Jupiter', '0 Y, 11 M, 6 D', '2026-03-17'],
-                                        ['Saturn', '1 Y, 1 M, 10 D', '2027-04-27'],
-                                        ['Mercury', '0 Y, 11 M, 28 D', '2028-04-24'],
-                                      ],
-                                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7),
-                                      headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                      cellHeight: 12.5,
-                                      cellStyle: const pw.TextStyle(fontSize: 6.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Text('Glohani Vastu® Planet & House Combinations:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                              pw.SizedBox(height: 3),
-                              pw.Table.fromTextArray(
-                                headers: ['Level - 1', 'Level - 2', 'Level - 3', 'Level - 4'],
-                                data: [
-                                  ['Lagna', 'Venus', 'Mercury', '-'],
-                                  ['Sun: 12, 1', 'Venus: 11, 3, 10', 'Jupiter: 9, 5, 8', '-'],
-                                  ['Moon: 11, 12', 'Saturn: 4, 6, 7', 'Mercury: 1, 2, 11', 'Moon: 2'],
-                                  ['Mercury: 1, 2, 11', 'Moon: 11, 12', 'Saturn: 4, 6, 7', 'Mercury: 4, 8, 12'],
-                                  ['Venus: 11, 3, 10', 'Saturn: 4, 6, 7', 'Mercury: 1, 2, 11', 'Venus: 1, 5, 9'],
-                                  ['Mars®: 7, 4, 9', 'Mercury: 1, 2, 11', 'Mercury: 1, 2, 11', 'Mars: 6, 10'],
-                                  ['Jupiter: 9, 5, 8', 'Moon: 11, 12', 'Rahu: 6, 4, 7', 'Jupiter: 3, 7, 11'],
-                                  ['Saturn: 4, 6, 7', 'Ketu: 12, 1', 'Venus: 11, 3, 10', '-'],
-                                  ['Rahu®: 6, 4, 7', 'Jupiter: 9, 5, 8', 'Jupiter: 9, 5, 8', '-'],
-                                  ['Ketu®: 12, 1', 'Venus: 11, 3, 10', 'Jupiter: 9, 5, 8', '-'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7.2),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                cellHeight: 12.5,
-                                cellStyle: const pw.TextStyle(fontSize: 6.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicAstroSuite(client.owner);
                         case 22:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANETS DEGREE & KP SUB-LORD (OWNER)'),
-                              pw.SizedBox(height: 6),
-                              pw.Center(child: pw.Text('Planets Matrix', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800))),
-                              pw.SizedBox(height: 6),
-                              pw.Table.fromTextArray(
-                                headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
-                                data: [
-                                  ['Lagna', "24° Leo 32' 52\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Mercury', "144° 32' 52\""],
-                                  ['Sun', "21° Leo 1' 8\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "141° 1' 8\""],
-                                  ['Moon', "5° Cancer 42' 33\"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 42' 33\""],
-                                  ['Mercury', "16° Virgo 10' 16\"", 'Mercury (Me)', 'Hasta', 'Moon (Mo)', 'Saturn', "166° 10' 16\""],
-                                  ['Venus', "5° Cancer 55' 24\"", 'Moon (Mo)', 'Pushya', 'Saturn (Sa)', 'Mercury', "95° 55' 24\""],
-                                  ['Mars®', "16° Pisces 56' 42\"", 'Jupiter (Ju)', 'Revati', 'Mercury (Me)', 'Mercury', "346° 56' 42\""],
-                                  ['Jupiter', "12° Taurus 1' 10\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "42° 1' 10\""],
-                                  ['Saturn', "2° Sagittarius 22' 21\"", 'Jupiter (Ju)', 'Mula', 'Ketu (Ke)', 'Venus', "242° 22' 21\""],
-                                  ['Rahu', "20° Aquarius 29' 49\"", 'Saturn (Sa)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Jupiter', "320° 29' 49\""],
-                                  ['Ketu®', "20° Leo 29' 49\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Jupiter', "140° 29' 49\""],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 20,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.2),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetsTable(client.owner);
                         case 23:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO PLANET HIT MATRIX (OWNER)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
-                                data: [
-                                  ['60 Degree Hit', 'Mars', 'Jupiter', '55.074'],
-                                  ['120 Degree Hit', 'Jupiter', 'Mercury', '124.152'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.SizedBox(height: 14),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
-                                data: [
-                                  ['45 Degree Hit', 'Moon', 'Sun', '45.31'],
-                                  ['180 Degree Hit', 'Mercury', 'Mars', '180.774'],
-                                  ['45 Degree Hit', 'Venus', 'Sun', '45.095'],
-                                  ['180 Degree Hit', 'Mars', 'Mercury', '179.226'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetHits(client.owner);
                         case 24:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO HOUSE HIT MATRIX (OWNER)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['30 Degree Hit', 'Sun', 'house 2', '30.91'],
-                                  ['60 Degree Hit', 'Sun', 'house 3', '61.264'],
-                                  ['120 Degree Hit', 'Sun', 'house 5', '124.594'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.SizedBox(height: 14),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['90 Degree Hit', 'Sun', 'house 4', '92.993'],
-                                  ['180 Degree Hit', 'Sun', 'house 7', '183.529'],
-                                  ['180 Degree Hit', 'Mercury', 'house 8', '185.757'],
-                                  ['180 Degree Hit', 'Mars', 'house 2', '184.984'],
-                                  ['45 Degree Hit', 'Jupiter', 'house 11', '43.594'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicHouseHits(client.owner);
                         case 25:
                           return buildNumerologyReportPage(client.owner);
 
+                        // WIFE (PAGES 26-30)
                         case 26:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('ASTRO-VASTU COMBINATIONS & KUNDLI (WIFE)'),
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(6),
-                                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 0.8), color: PdfColors.grey100),
-                                child: pw.Column(
-                                  children: [
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('Name: ${client.wife.name.toUpperCase()} (wife)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.wife.dob)}, Age: ${client.wife.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('TIME: ${client.wife.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
-                                      ],
-                                    ),
-                                    pw.SizedBox(height: 3),
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('RASHI: Leo', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
-                                        pw.Text('LAGNA: Cancer', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                                        pw.Text('NAKSHATRA: Purva Phalguni', style: const pw.TextStyle(fontSize: 7.5)),
-                                        pw.Text('MAHADASHA(NOW): Rahu', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  if (circularKundliWheel != null)
-                                    pw.Image(pw.MemoryImage(circularKundliWheel), width: 220, height: 220, fit: pw.BoxFit.contain)
-                                  else
-                                    pw.Container(width: 200, height: 200, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                                  pw.SizedBox(width: 10),
-                                  pw.Expanded(
-                                    child: pw.Table.fromTextArray(
-                                      headers: ['Planet', 'Duration', 'End Date'],
-                                      data: [
-                                        ['Rahu', '2 Y, 8 M, 12 D', '2020-11-30'],
-                                        ['Jupiter', '2 Y, 4 M, 24 D', '2023-04-23'],
-                                        ['Saturn', '2 Y, 10 M, 7 D', '2026-03-02'],
-                                        ['Mercury', '2 Y, 6 M, 18 D', '2028-09-20'],
-                                        ['Ketu', '1 Y, 0 M, 19 D', '2029-10-09'],
-                                        ['Venus', '3 Y, 0 M, 0 D', '2032-10-09'],
-                                        ['Sun', '0 Y, 10 M, 24 D', '2033-09-02'],
-                                        ['Moon', '1 Y, 6 M, 0 D', '2035-03-02'],
-                                        ['Mars', '1 Y, 0 M, 19 D', '2036-03-21'],
-                                      ],
-                                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7),
-                                      headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                      cellHeight: 12.5,
-                                      cellStyle: const pw.TextStyle(fontSize: 6.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Text('Glohani Vastu® Planet & House Combinations (Wife):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                              pw.SizedBox(height: 3),
-                              pw.Table.fromTextArray(
-                                headers: ['Level - 1', 'Level - 2', 'Level - 3', 'Level - 4'],
-                                data: [
-                                  ['Lagna', 'Mercury', 'Saturn', '-'],
-                                  ['Sun: 9, 2', 'Ketu: 1, 9, 2', 'Moon: 1', 'Sun: 6, 10'],
-                                  ['Moon: 1', 'Venus: 9, 4, 11', 'Saturn: 5, 7, 8', '-'],
-                                  ['Mercury: 9, 3, 12', 'Venus: 9, 4, 11', 'Mars: 10, 5', 'Mercury: 1, 5, 9'],
-                                  ['Venus: 9, 4, 11', 'Ketu: 1, 9, 2', 'Rahu: 7, 5, 8', 'Venus: 2'],
-                                  ['Mars: 10, 5', 'Mars: 10, 5', 'Saturn: 5, 7, 8', 'Mars: 3, 7, 11'],
-                                  ['Jupiter: 10, 6, 9', 'Moon: 1', 'Rahu: 7, 5, 8', 'Jupiter: 4, 8, 12'],
-                                  ['Saturn: 5, 7, 8', 'Venus: 9, 4, 11', 'Jupiter: 10, 6, 9', '-'],
-                                  ['Rahu®: 7, 5, 8', 'Rahu: 7, 5, 8', 'Jupiter: 10, 6, 9', '-'],
-                                  ['Ketu®: 1, 9, 2', 'Ketu: 1, 9, 2', 'Saturn: 5, 7, 8', '-'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7.2),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                cellHeight: 12.5,
-                                cellStyle: const pw.TextStyle(fontSize: 6.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicAstroSuite(client.wife);
                         case 27:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANETS DEGREE & KP SUB-LORD (WIFE)'),
-                              pw.SizedBox(height: 6),
-                              pw.Center(child: pw.Text('Planets Matrix', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800))),
-                              pw.SizedBox(height: 6),
-                              pw.Table.fromTextArray(
-                                headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
-                                data: [
-                                  ['Lagna', "28° Cancer 39' 15\"", 'Moon (Mo)', 'Ashlesha', 'Mercury (Me)', 'Saturn', "118° 39' 15\""],
-                                  ['Sun', "3° Aries 42' 19\"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Moon', "3° 42' 19\""],
-                                  ['Moon', "22° Leo 44' 16\"", 'Sun (Su)', 'Purva Phalguni', 'Venus (Ve)', 'Saturn', "142° 44' 16\""],
-                                  ['Mercury', "17° Aries 20' 7\"", 'Mars (Ma)', 'Bharani', 'Venus (Ve)', 'Mars', "17° 20' 7\""],
-                                  ['Venus', "6° Aries 53' 47\"", 'Mars (Ma)', 'Ashwini', 'Ketu (Ke)', 'Rahu', "6° 53' 47\""],
-                                  ['Mars', "29° Taurus 5' 0\"", 'Venus (Ve)', 'Mrigashira', 'Mars (Ma)', 'Saturn', "59° 5' 0\""],
-                                  ['Jupiter', "13° Taurus 2' 47\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Rahu', "43° 2' 47\""],
-                                  ['Saturn', "20° Sagittarius 17' 21\"", 'Jupiter (Ju)', 'Purva Ashadha', 'Venus (Ve)', 'Jupiter', "260° 17' 21\""],
-                                  ['Rahu®', "10° Aquarius 6' 45\"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Jupiter', "310° 6' 45\""],
-                                  ['Ketu®', "10° Leo 6' 45\"", 'Sun (Su)', 'Magha', 'Ketu (Ke)', 'Saturn', "130° 6' 45\""],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 20,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.2),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetsTable(client.wife);
                         case 28:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO PLANET HIT MATRIX (WIFE)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
-                                data: [
-                                  ['60 Degree Hit', 'Mars', 'Sun', '55.378'],
-                                  ['120 Degree Hit', 'Moon', 'Saturn', '117.551'],
-                                  ['120 Degree Hit', 'Mercury', 'Moon', '125.403'],
-                                  ['120 Degree Hit', 'Mercury', 'Saturn', '117.046'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetHits(client.wife);
                         case 29:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO HOUSE HIT MATRIX (WIFE)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['120 Degree Hit', 'Sun', 'house 1', '114.949'],
-                                  ['60 Degree Hit', 'Sun', 'house 11', '55.805'],
-                                  ['120 Degree Hit', 'Moon', 'house 6', '126.679'],
-                                  ['60 Degree Hit', 'Mars', 'house 1', '59.571'],
-                                  ['120 Degree Hit', 'Mars', 'house 3', '117.622'],
-                                  ['30 Degree Hit', 'Mars', 'house 12', '30.333'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 16,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.2),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.SizedBox(height: 10),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['180 Degree Hit', 'Sun', 'house 3', '173.000'],
-                                  ['90 Degree Hit', 'Sun', 'house 12', '85.711'],
-                                  ['180 Degree Hit', 'Moon', 'house 8', '183.429'],
-                                  ['45 Degree Hit', 'Mercury', 'house 11', '42.175'],
-                                  ['90 Degree Hit', 'Mars', 'house 2', '87.084'],
-                                  ['180 Degree Hit', 'Mars', 'house 5', '180.427'],
-                                  ['45 Degree Hit', 'Jupiter', 'house 12', '46.370'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 16,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.2),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicHouseHits(client.wife);
                         case 30:
                           return buildNumerologyReportPage(client.wife);
 
+                        // CHILD (PAGES 31-35)
                         case 31:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('ASTRO-VASTU COMBINATIONS & KUNDLI (CHILD)'),
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(6),
-                                decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.teal, width: 0.8), color: PdfColors.grey100),
-                                child: pw.Column(
-                                  children: [
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('Name: ${client.child.name.toUpperCase()} (child)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('D.O.B: ${DateFormat("dd-MM-yyyy").format(client.child.dob)}, Age: ${client.child.ageYears}Y', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                                        pw.Text('TIME: ${client.child.formattedBirthTime}', style: const pw.TextStyle(fontSize: 8)),
-                                      ],
-                                    ),
-                                    pw.SizedBox(height: 3),
-                                    pw.Row(
-                                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        pw.Text('RASHI: Cancer', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.blue800)),
-                                        pw.Text('LAGNA: Pisces', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-                                        pw.Text('NAKSHATRA: Punarvasu', style: const pw.TextStyle(fontSize: 7.5)),
-                                        pw.Text('MAHADASHA(NOW): Saturn', style: pw.TextStyle(fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.teal800)),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Row(
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  if (circularKundliWheel != null)
-                                    pw.Image(pw.MemoryImage(circularKundliWheel), width: 220, height: 220, fit: pw.BoxFit.contain)
-                                  else
-                                    pw.Container(width: 200, height: 200, decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.grey200)),
-                                  pw.SizedBox(width: 10),
-                                  pw.Expanded(
-                                    child: pw.Table.fromTextArray(
-                                      headers: ['Planet', 'Duration', 'End Date'],
-                                      data: [
-                                        ['Saturn', '3 Y, 0 M, 3 D', '2027-07-22'],
-                                        ['Mercury', '2 Y, 8 M, 9 D', '2030-03-31'],
-                                        ['Ketu', '1 Y, 1 M, 10 D', '2031-05-11'],
-                                        ['Venus', '3 Y, 2 M, 0 D', '2034-07-11'],
-                                        ['Sun', '0 Y, 11 M, 12 D', '2035-06-23'],
-                                        ['Moon', '1 Y, 7 M, 0 D', '2037-01-23'],
-                                        ['Mars', '1 Y, 1 M, 10 D', '2038-03-05'],
-                                        ['Rahu', '2 Y, 10 M, 6 D', '2041-01-11'],
-                                        ['Jupiter', '2 Y, 6 M, 12 D', '2043-07-23'],
-                                      ],
-                                      headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7),
-                                      headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                      cellHeight: 12.5,
-                                      cellStyle: const pw.TextStyle(fontSize: 6.8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              pw.SizedBox(height: 8),
-                              pw.Text('Glohani Vastu® Planet & House Combinations (Child):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8.5)),
-                              pw.SizedBox(height: 3),
-                              pw.Table.fromTextArray(
-                                headers: ['Level - 1', 'Level - 2', 'Level - 3', 'Level - 4'],
-                                data: [
-                                  ['Lagna', 'Jupiter', 'Rahu', '-'],
-                                  ['Sun: 12', 'Rahu: 3, 12, 8, 2, 9', 'Saturn: 11, 12', 'Sun: 3, 7, 11'],
-                                  ['Moon: 5, 6', 'Jupiter: 11, 1, 10', 'Moon: 5, 6', '-'],
-                                  ['Mercury: 11, 4, 5, 7', 'Moon: 5, 6', 'Saturn: 11, 12', 'Mercury: 6'],
-                                  ['Venus: 12, 3, 8', 'Mars: 2, 9', 'Venus: 12, 3, 8', '-'],
-                                  ['Mars: 2, 9', 'Sun: 12', 'Jupiter: 11, 1, 10', 'Mars: 4, 12'],
-                                  ['Jupiter: 11, 1, 10', 'Moon: 5, 6', 'Venus: 12, 3, 8', 'Jupiter: 1, 5'],
-                                  ['Saturn: 11, 12', 'Moon: 5, 6', 'Rahu: 3, 12, 8, 2, 9', 'Saturn: 9'],
-                                  ['Rahu: 3, 12, 8, 2, 9', 'Moon: 5, 6', 'Venus: 12, 3, 8', 'Rahu: 8'],
-                                  ['Ketu®: 9, 2', 'Mercury: 11, 4, 5, 7', 'Moon: 5, 6', 'Ketu: 2, 10'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white, fontSize: 7.2),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.teal),
-                                cellHeight: 12.5,
-                                cellStyle: const pw.TextStyle(fontSize: 6.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicAstroSuite(client.child);
                         case 32:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANETS DEGREE & KP SUB-LORD (CHILD)'),
-                              pw.SizedBox(height: 6),
-                              pw.Center(child: pw.Text('Planets Matrix', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.brown800))),
-                              pw.SizedBox(height: 6),
-                              pw.Table.fromTextArray(
-                                headers: ['Planet', 'Rashi', 'Rashi Lord', 'Nakshatra', 'Nakshatra Lord', 'Sub Lord', 'Full Degree'],
-                                data: [
-                                  ['Lagna', "2° Pisces 36' 7\"", 'Jupiter (Ju)', 'Purva Bhadrapada', 'Jupiter (Ju)', 'Rahu', "332° 36' 7\""],
-                                  ['Sun', "11° Aquarius 38' 39\"", 'Saturn (Sa)', 'Shatabhisha', 'Rahu (Ra)', 'Saturn', "311° 38' 39\""],
-                                  ['Moon', "0° Cancer 30' 12\"", 'Moon (Mo)', 'Punarvasu', 'Jupiter (Ju)', 'Moon', "90° 30' 12\""],
-                                  ['Mercury', "17° Capricorn 28' 39\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Saturn', "287° 28' 39\""],
-                                  ['Venus', "4° Aquarius 8' 13\"", 'Saturn (Sa)', 'Dhanishta', 'Mars (Ma)', 'Venus', "304° 8' 13\""],
-                                  ['Mars', "1° Taurus 18' 58\"", 'Venus (Ve)', 'Krittika', 'Sun (Su)', 'Jupiter', "31° 18' 58\""],
-                                  ['Jupiter', "21° Capricorn 26' 13\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Venus', "291° 26' 13\""],
-                                  ['Saturn', "13° Capricorn 53' 2\"", 'Saturn (Sa)', 'Shravana', 'Moon (Mo)', 'Rahu', "283° 53' 2\""],
-                                  ['Rahu®', "22° Taurus 33' 25\"", 'Venus (Ve)', 'Rohini', 'Moon (Mo)', 'Venus', "52° 33' 25\""],
-                                  ['Ketu®', "22° Scorpio 33' 25\"", 'Mars (Ma)', 'Jyeshtha', 'Mercury (Me)', 'Moon', "232° 33' 25\""],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 7.5),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 20,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.2),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetsTable(client.child);
                         case 33:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO PLANET HIT MATRIX (CHILD)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
-                                data: [
-                                  ['60 Degree Hit', 'Mars', 'Moon', '59.187'],
-                                  ['30 Degree Hit', 'Sun', 'Saturn', '27.760'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.SizedBox(height: 14),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet 1', 'Planet 2', 'Degree'],
-                                data: [
-                                  ['90 Degree Hit', 'Venus', 'Mars', '87.179'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 18,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7.5),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicPlanetHits(client.child);
                         case 34:
-                          return pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              buildHeader('PLANET TO HOUSE HIT MATRIX (CHILD)'),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Positive Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['60 Degree Hit', 'Sun', 'house 2', '59.110'],
-                                  ['120 Degree Hit', 'Sun', 'house 4', '112.153'],
-                                  ['60 Degree Hit', 'Moon', 'house 7', '62.099'],
-                                  ['120 Degree Hit', 'Mercury', 'house 3', '112.146'],
-                                  ['30 Degree Hit', 'Venus', 'house 1', '28.465'],
-                                  ['120 Degree Hit', 'Venus', 'house 4', '119.660'],
-                                  ['30 Degree Hit', 'Mars', 'house 4', '32.481'],
-                                  ['60 Degree Hit', 'Mars', 'house 5', '56.359'],
-                                  ['120 Degree Hit', 'Mars', 'house 7', '121.286'],
-                                  ['120 Degree Hit', 'Saturn', 'house 3', '115.740'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 15,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.SizedBox(height: 10),
-                              pw.Container(
-                                width: double.infinity,
-                                padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                                color: PdfColors.grey100,
-                                child: pw.Center(child: pw.Text('Negative Hit', style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: PdfColors.brown700))),
-                              ),
-                              pw.Table.fromTextArray(
-                                headers: ['Hit Name', 'Planet', 'House', 'Degree'],
-                                data: [
-                                  ['90 Degree Hit', 'Sun', 'house 3', '87.980'],
-                                  ['180 Degree Hit', 'Moon', 'house 11', '177.172'],
-                                  ['45 Degree Hit', 'Mercury', 'house 1', '45.125'],
-                                  ['180 Degree Hit', 'Jupiter', 'house 6', '184.177'],
-                                  ['90 Degree Hit', 'Saturn', 'house 2', '86.870'],
-                                ],
-                                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.black, fontSize: 8),
-                                headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                                cellHeight: 15,
-                                cellAlignment: pw.Alignment.center,
-                                cellStyle: const pw.TextStyle(fontSize: 7),
-                                border: pw.TableBorder.all(color: PdfColors.grey500, width: 0.8),
-                              ),
-                              pw.Spacer(),
-                              buildFooter(),
-                            ],
-                          );
-
+                          return buildDynamicHouseHits(client.child);
                         case 35:
                           return buildNumerologyReportPage(client.child);
 
