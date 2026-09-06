@@ -1024,11 +1024,11 @@ jobs:
                   alignment: pw.Alignment.center,
                   children: [
                     if (bgMap != null)
-                      pw.Image(pw.MemoryImage(bgMap), width: 300, height: 300, fit: pw.BoxFit.contain),
+                      pw.Image(pw.MemoryImage(bgMap), width: 310, height: 310, fit: pw.BoxFit.contain),
 
                     if (devtaAsset != null)
                       pw.Transform.rotate(
-                        angle: (degree) * (math.pi / 180.0),
+                        angle: (-degree) * (math.pi / 180.0),
                         child: pw.Image(pw.MemoryImage(devtaAsset), width: 340, height: 340, fit: pw.BoxFit.contain),
                       ),
                     pw.Container(
@@ -1747,7 +1747,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 12: TRUE EXCEL GRAPH & SUMMARY
+                        // PAGE 12: EXACT TRUE EXCEL GRAPH & SUMMARY
                         case 12:
                           final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree, client.manualZonalStrength);
                           final Map<String, double> areas = data['areas'];
