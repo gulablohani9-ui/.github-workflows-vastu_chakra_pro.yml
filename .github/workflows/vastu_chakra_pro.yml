@@ -1011,8 +1011,10 @@ jobs:
               );
             }
 
+            // Page 10: 45 Devta Grid Overlay (Using vastu_45_devtas.png rotated with North Degree over Map)
             pw.Widget buildConcentric45DevtaPlate({
               required Uint8List? bgMap,
+              required Uint8List? devtaAsset,
               required double degree,
             }) {
               return pw.Container(
@@ -1022,70 +1024,17 @@ jobs:
                   alignment: pw.Alignment.center,
                   children: [
                     if (bgMap != null)
-                      pw.Image(pw.MemoryImage(bgMap), width: 310, height: 310, fit: pw.BoxFit.contain),
+                      pw.Image(pw.MemoryImage(bgMap), width: 300, height: 300, fit: pw.BoxFit.contain),
 
-                    pw.Transform.rotate(
-                      angle: (degree) * (math.pi / 180),
-                      child: pw.Container(
-                        width: 290,
-                        height: 320,
-                        child: pw.CustomPaint(
-                          size: const PdfPoint(290, 320),
-                          painter: (PdfGraphics canvas, PdfPoint size) {
-                            double w = 290;
-                            double h = 320;
-                            double cx = w / 2;
-                            double cy = h / 2;
-
-                            canvas.setColor(PdfColors.brown800);
-                            canvas.setLineWidth(1.2);
-                            canvas.drawRect(5, 5, w - 10, h - 10);
-                            canvas.strokePath();
-
-                            double w77 = (w - 10) * 0.77;
-                            double h77 = (h - 10) * 0.77;
-                            canvas.drawRect(cx - w77 / 2, cy - h77 / 2, w77, h77);
-                            canvas.strokePath();
-
-                            double w33 = (w - 10) * 0.33;
-                            double h33 = (h - 10) * 0.33;
-                            canvas.setColor(PdfColors.red900);
-                            canvas.setLineWidth(1.4);
-                            canvas.drawRect(cx - w33 / 2, cy - h33 / 2, w33, h33);
-                            canvas.strokePath();
-
-                            canvas.setColor(PdfColors.brown600);
-                            canvas.setLineWidth(0.85);
-
-                            void drawRadial(double x1, double y1, double x2, double y2) {
-                              canvas.drawLine(x1, y1, x2, y2);
-                              canvas.strokePath();
-                            }
-
-                            for (int i = 1; i <= 6; i++) {
-                              double px = 5 + ((w - 10) / 7) * i;
-                              double bx = (cx - w33 / 2) + (w33 / 7) * i;
-                              drawRadial(bx, cy - h33 / 2, px, 5);
-                              drawRadial(bx, cy + h33 / 2, px, h - 5);
-                            }
-                            for (int i = 1; i <= 10; i++) {
-                              double py = 5 + ((h - 10) / 11) * i;
-                              double by = (cy - h33 / 2) + (h33 / 11) * i;
-                              drawRadial(cx - w33 / 2, by, 5, py);
-                              drawRadial(cx + w33 / 2, by, w - 5, py);
-                            }
-                          },
-                        ),
+                    if (devtaAsset != null)
+                      pw.Transform.rotate(
+                        angle: (degree) * (math.pi / 180.0),
+                        child: pw.Image(pw.MemoryImage(devtaAsset), width: 340, height: 340, fit: pw.BoxFit.contain),
                       ),
-                    ),
-
                     pw.Container(
                       width: 8,
                       height: 8,
                       decoration: const pw.BoxDecoration(shape: pw.BoxShape.circle, color: PdfColors.red800),
-                    ),
-                    pw.Positioned(
-                      child: pw.Text('Brahma (33%)', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
                     ),
                   ],
                 ),
@@ -1467,6 +1416,7 @@ jobs:
               final recommendedColorsFrame = await _loadAssetBytes('assets/images/recommended_colors_frame.png');
               final vastu16Zones = await _loadAssetBytes('assets/images/vastu_16_zones.png');
               final vastu32Padas = await _loadAssetBytes('assets/images/vastu_32_padas.png');
+              final vastu45Devtas = await _loadAssetBytes('assets/images/vastu_45_devtas.png');
 
               for (int pNum = 1; pNum <= 37; pNum++) {
                 pdf.addPage(
@@ -1733,27 +1683,14 @@ jobs:
                             ],
                           );
 
-                        // PAGE 10: 45 DEVTA GRID (MAP VISIBLE)
+                        // PAGE 10: 45 DEVTA GRID OVERLAY WITH VASTU_45_DEVTAS.PNG
                         case 10:
                           return pw.Column(
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               buildHeader('DISTRIBUTION OF 45 ENERGY FIELDS / DEVTA'),
                               pw.SizedBox(height: 4),
-                              pw.Center(
-                                child: pw.Container(
-                                  width: 330,
-                                  height: 330,
-                                  child: pw.Stack(
-                                    alignment: pw.Alignment.center,
-                                    children: [
-                                      if (mapImageBytes != null)
-                                        pw.Image(pw.MemoryImage(mapImageBytes!), width: 300, height: 300, fit: pw.BoxFit.contain),
-                                      buildConcentric45DevtaPlate(bgMap: null, degree: client.northDegree),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                              pw.Center(child: buildConcentric45DevtaPlate(bgMap: mapImageBytes, devtaAsset: vastu45Devtas, degree: client.northDegree)),
                               pw.SizedBox(height: 6),
                               pw.Text('45 Devtas Breakdown (Brahmasthan 45=Brahma):', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8)),
                               pw.Wrap(
@@ -1810,7 +1747,7 @@ jobs:
                             ],
                           );
 
-                        // PAGE 12: TRUE EXCEL ZONAL STRENGTH GRAPH
+                        // PAGE 12: TRUE EXCEL GRAPH & SUMMARY
                         case 12:
                           final data = calculateExcelZonalStrength(client.plotWidth, client.plotLength, client.northDegree, client.manualZonalStrength);
                           final Map<String, double> areas = data['areas'];
